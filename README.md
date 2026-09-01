@@ -14,13 +14,15 @@ The model produces three outputs from one forward pass:
 
 ## Datasets (in `data/`)
 
+[![Fake-LocalDiff (Google Drive)](https://img.shields.io/badge/Download-Fake--LocalDiff%20(4.8%20GB)-4285F4?logo=googledrive&logoColor=white)](https://drive.google.com/file/d/1O5l0_hkAosKmHd1HZ55_M8ofMh1MB47m/view?usp=sharing)
+
 | Benchmark | Base imagery | Generator | Train | Test forged | Test authentic |
 | --- | --- | --- | --- | --- | --- |
 | Fake-Vaihingen | ISPRS Vaihingen aerial | LaMa + RePaint | 2,099 | 386 | 139 |
 | Fake-LoveDA | LoveDA land-cover | LaMa + RePaint | 6,852 | 1,292 | 428 |
-| Fake-LocalDiff (ours) | PRDLC-PRO + RRSIS scenes | Latent diffusion (SD-2 inpainting) | 8,000 | 800 | 800 |
+| **Fake-LocalDiff (ours)** | PRDLC-PRO + RRSIS scenes | Latent diffusion (SD-2 inpainting) | 8,000 | 800 | 800 |
 
-Fake-Vaihingen and Fake-LoveDA are released by the FLDCF authors (Sui et al., TGRS 2024). Fake-LocalDiff is the benchmark introduced in our paper (prompt-driven latent-diffusion local replacements with byte-exact compositing). The authentic folders of each benchmark are shared between its two generator variants and are de-duplicated at load time (`cfg.DEDUPE_REALS`).
+Fake-Vaihingen and Fake-LoveDA are released by the FLDCF authors (Sui et al., TGRS 2024). Fake-LocalDiff is the benchmark introduced in our paper (prompt-driven latent-diffusion local replacements with byte-exact compositing) — **[download Fake-LocalDiff.zip (4.8 GB)](https://drive.google.com/file/d/1O5l0_hkAosKmHd1HZ55_M8ofMh1MB47m/view?usp=sharing)** and extract it as `Local_Diffusion/` under your dataset root. The authentic folders of each benchmark are shared between its two generator variants and are de-duplicated at load time (`cfg.DEDUPE_REALS`).
 
 Expected folder layout under the dataset root (see `data/README.md`):
 

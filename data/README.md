@@ -24,7 +24,7 @@ DATA_ROOT/
 | --- | --- |
 | Fake-Vaihingen | Released with FLDCF (Sui et al., TGRS 2024) — LaMa + RePaint forgeries of ISPRS Vaihingen |
 | Fake-LoveDA | Released with FLDCF (Sui et al., TGRS 2024) — LaMa + RePaint forgeries of the LoveDA dataset |
-| Fake-LocalDiff | Introduced in our paper — prompt-driven latent-diffusion (SD-2 inpainting) local replacements of PRDLC-PRO and RRSIS scenes; 4,800 forged + 4,800 untouched originals at 256×256 PNG |
+| Fake-LocalDiff | Introduced in our paper — prompt-driven latent-diffusion (SD-2 inpainting) local replacements of PRDLC-PRO and RRSIS scenes; 4,800 forged + 4,800 untouched originals at 256×256 PNG. **[Download Fake-LocalDiff.zip (4.8 GB)](https://drive.google.com/file/d/1O5l0_hkAosKmHd1HZ55_M8ofMh1MB47m/view?usp=sharing)** and extract it as `Local_Diffusion/` |
 
 Entries whose folders are missing are skipped with a warning, so the pipeline
 can run on any subset (set `DATASET_GROUP` in `src/main.py` to
