@@ -1,0 +1,22 @@
+# datasets (download separately, see data/README.md)
+data/Fake-Vaihingen/
+data/Fake-LoveDA/
+data/Local_Diffusion/
+
+# checkpoints and training outputs
+*.pt
+*.pth
+NRGA-Net/
+
+# generated reports
+results/*.csv
+results/*.txt
+
+# python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# OS
+Thumbs.db
+.DS_Store
