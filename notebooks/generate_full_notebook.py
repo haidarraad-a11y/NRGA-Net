@@ -27,6 +27,11 @@ md("""# NRGA-Net — Full-dataset table generator (Colab Pro+, Drive-only)
 
 This notebook trains NRGA-Net on the **complete training split** stored in your Google Drive and evaluates on the independent final-test split. **No dataset is uploaded to GitHub.** Only the code comes from GitHub; your data stays in Drive.
 
+All paths match your existing notebook `NRGA_Net_Training_DenseNet201_v12_noViT_VANKv15.ipynb`:
+- Dataset root: `MyDrive/PhD_GIS_Security/DB_local`
+- Existing output folder (untouched): `MyDrive/PhD_GIS_Security/DB_local/NRGA_Local_V15`
+- New revised-run output: `MyDrive/PhD_GIS_Security/DB_local/NRGA_Net_revised`
+
 **Recommended runtime:** GPU (A100 or V100), High-RAM enabled.
 
 **What it does:**
@@ -34,12 +39,12 @@ This notebook trains NRGA-Net on the **complete training split** stored in your 
 2. Mounts your Google Drive.
 3. Generates deterministic `train / calibration / final-test` splits from the Drive dataset.
 4. Copies the full training set + calibration + final-test into Colab local SSD (`/content`) for fast training.
-5. Runs the full training run and saves checkpoints to Drive every few epochs.
+5. Runs the full training run and saves checkpoints to `DB_local/NRGA_Net_revised` every few epochs.
 6. Evaluates on the final-test set and produces Tables 3–9, saved back to Drive.
 
 **After running:**
-- All CSV tables are in `MyDrive/NRGA-Net_full_results/`.
-- The best checkpoint is in `MyDrive/NRGA-Net_full_checkpoints/`.
+- All CSV tables are in `MyDrive/PhD_GIS_Security/DB_local/NRGA_Net_revised/full_tables/`.
+- The best checkpoint is `MyDrive/PhD_GIS_Security/DB_local/NRGA_Net_revised/nrga_full_best.pt`.
 - Replace the `[TO BE FILLED]` placeholders in the manuscript with these numbers.
 """)
 
@@ -58,20 +63,24 @@ from google.colab import drive
 drive.mount('/content/drive')
 
 # ============================================================================
-# EDIT ONLY THIS BLOCK to match your Drive layout
+# EDIT ONLY THIS BLOCK if your Drive layout differs from the existing notebook.
+# These paths match NRGA_Net_Training_DenseNet201_v12_noViT_VANKv15.ipynb.
 # ============================================================================
-# This should be the folder that contains Fake-Vaihingen, Fake-LoveDA, Local_Diffusion
+
+# Base dataset directory (same as BASE_DB in your existing notebook)
 DATA_ROOT = '/content/drive/MyDrive/PhD_GIS_Security/DB_local'
 
-# Where to copy data inside Colab for fast SSD access (temporary)
+# Your existing pipeline's output folder (kept unchanged)
+EXISTING_OUTPUT_DIR = f'{DATA_ROOT}/NRGA_Local_V15'
+
+# New folder for the revised-run checkpoints and tables, kept under DB_local
+RUN_OUTPUT_DIR = f'{DATA_ROOT}/NRGA_Net_revised'
+
+# Temporary local SSD copies for fast training (deleted when Colab restarts)
 WORK_ROOT = '/content/nrga_full_root'
 TEST_ROOT = '/content/nrga_full_root_test'
 
-# Where to save checkpoints and results permanently (Google Drive)
-DRIVE_SAVE_DIR = '/content/drive/MyDrive/NRGA-Net_full_checkpoints'
-DRIVE_RESULTS_DIR = '/content/drive/MyDrive/NRGA-Net_full_results'
-
-# Repository path inside Colab (code only)
+# Repository path inside Colab (code only, no data)
 REPO_ROOT = '/content/NRGA-Net'
 # ============================================================================
 
@@ -81,10 +90,11 @@ os.environ['NRGA_TEST_ROOT'] = TEST_ROOT
 os.environ['NRGA_QUICK_MODE'] = '0'   # full run, no shortcuts
 
 print('DATA_ROOT:', DATA_ROOT)
+print('EXISTING_OUTPUT_DIR:', EXISTING_OUTPUT_DIR)
+print('RUN_OUTPUT_DIR:', RUN_OUTPUT_DIR)
 print('WORK_ROOT:', WORK_ROOT)
 print('TEST_ROOT:', TEST_ROOT)
-print('DRIVE_SAVE_DIR:', DRIVE_SAVE_DIR)
-print('DRIVE_RESULTS_DIR:', DRIVE_RESULTS_DIR)
+print('REPO_ROOT:', REPO_ROOT)
 """)
 
 code("""# ------------------------------------------------------------------------------
@@ -207,6 +217,7 @@ code("""# ----------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 import os, sys
 REPO_ROOT = '/content/NRGA-Net'
+RUN_OUTPUT_DIR = '/content/drive/MyDrive/PhD_GIS_Security/DB_local/NRGA_Net_revised'
 sys.path.insert(0, f'{REPO_ROOT}/src')
 
 main_path = f'{REPO_ROOT}/src/main.py'
@@ -216,6 +227,13 @@ with open(main_path, 'r', encoding='utf-8') as f:
 prefix = code_all.split('# --- NRGA-NOTEBOOK-DEFINITIONS-END ---')[0]
 print(f'Executing {len(prefix.splitlines())} lines of definitions from src/main.py...')
 exec(prefix)
+
+# Override the output directory so the revised run writes under DB_local
+# while keeping your existing NRGA_Local_V15 folder untouched.
+cfg.OUTPUT_DIR = RUN_OUTPUT_DIR
+os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+print('OUTPUT_DIR overridden to:', cfg.OUTPUT_DIR)
+
 print('Definitions loaded.')
 print('Train loader length:', len(train_loader) if 'train_loader' in globals() else 'N/A')
 print('Val   loader length:', len(val_loader) if 'val_loader' in globals() else 'N/A')
@@ -229,8 +247,8 @@ import shutil
 from pathlib import Path
 from collections import defaultdict
 
-DRIVE_SAVE_DIR = '/content/drive/MyDrive/NRGA-Net_full_checkpoints'
-Path(DRIVE_SAVE_DIR).mkdir(parents=True, exist_ok=True)
+RUN_OUTPUT_DIR = '/content/drive/MyDrive/PhD_GIS_Security/DB_local/NRGA_Net_revised'
+Path(RUN_OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 
 best_score = 0.0
 patience_counter = 0
@@ -239,12 +257,11 @@ history = defaultdict(list)
 output_dir = Path(cfg.OUTPUT_DIR)
 output_dir.mkdir(parents=True, exist_ok=True)
 best_path = output_dir / 'nrga_full_best.pt'
-drive_best_path = Path(DRIVE_SAVE_DIR) / 'nrga_full_best.pt'
 
-# Optional: resume from Drive if a previous run exists
-if drive_best_path.exists():
-    print('Resuming from Drive checkpoint:', drive_best_path)
-    ckpt = torch.load(drive_best_path, map_location=DEVICE, weights_only=False)
+# Optional: resume from previous revised-run checkpoint if it exists
+if best_path.exists():
+    print('Resuming from:', best_path)
+    ckpt = torch.load(best_path, map_location=DEVICE, weights_only=False)
     model.load_state_dict(ckpt['model_state'])
     start_epoch = ckpt.get('epoch', 0) + 1
 else:
@@ -269,8 +286,7 @@ for epoch in range(start_epoch, cfg.EPOCHS + 1):
         best_score = score
         patience_counter = 0
         torch.save({'model_state': model.state_dict(), 'cfg': cfg, 'epoch': epoch}, best_path)
-        shutil.copy2(best_path, drive_best_path)
-        print('  -> new best saved to Drive')
+        print('  -> new best saved')
     else:
         patience_counter += 1
         if patience_counter >= patience:
@@ -279,7 +295,7 @@ for epoch in range(start_epoch, cfg.EPOCHS + 1):
 
     # Periodic backup every 10 epochs (in case of disconnect)
     if epoch % 10 == 0:
-        backup_path = Path(DRIVE_SAVE_DIR) / f'nrga_full_epoch{epoch:03d}.pt'
+        backup_path = Path(RUN_OUTPUT_DIR) / f'nrga_full_epoch{epoch:03d}.pt'
         torch.save({'model_state': model.state_dict(), 'cfg': cfg, 'epoch': epoch}, backup_path)
         print(f'  -> periodic backup saved: {backup_path}')
 
@@ -642,28 +658,28 @@ code("""# ----------------------------------------------------------------------
 import shutil
 from pathlib import Path
 
-DRIVE_RESULTS_DIR = '/content/drive/MyDrive/NRGA-Net_full_results'
-Path(DRIVE_RESULTS_DIR).mkdir(parents=True, exist_ok=True)
+RUN_OUTPUT_DIR = '/content/drive/MyDrive/PhD_GIS_Security/DB_local/NRGA_Net_revised'
 results_dir = Path('/content/NRGA-Net/results/full_tables')
-shutil.copytree(results_dir, Path(DRIVE_RESULTS_DIR) / 'full_tables', dirs_exist_ok=True)
+drive_results_dir = Path(RUN_OUTPUT_DIR) / 'full_tables'
+drive_results_dir.mkdir(parents=True, exist_ok=True)
+shutil.copytree(results_dir, drive_results_dir, dirs_exist_ok=True)
 
-# Also copy the best checkpoint one more time to be safe
-DRIVE_SAVE_DIR = '/content/drive/MyDrive/NRGA-Net_full_checkpoints'
-best_path = Path('/content/NRGA-Net') / cfg.OUTPUT_DIR / 'nrga_full_best.pt'
-if best_path.exists():
-    shutil.copy2(best_path, Path(DRIVE_SAVE_DIR) / 'nrga_full_best.pt')
+# Best checkpoint is already saved in RUN_OUTPUT_DIR; confirm its presence
+best_path = Path(RUN_OUTPUT_DIR) / 'nrga_full_best.pt'
+print('Best checkpoint:', best_path, '(exists:' , best_path.exists(), ')')
 
-print('Results uploaded to:', DRIVE_RESULTS_DIR)
-print('Best checkpoint in:', DRIVE_SAVE_DIR)
-print('\\nYou can now download the CSV tables and checkpoint from your Google Drive.')
-print('No data has been uploaded to GitHub.')
+print('\\nAll results saved under:', RUN_OUTPUT_DIR)
+print('  - Checkpoints: ', RUN_OUTPUT_DIR)
+print('  - CSV tables:  ', drive_results_dir)
+print('\\nNo data has been uploaded to GitHub.')
 """)
 
 md("""## Next steps
 
-1. Download the CSV files from `results/full_tables/` (also backed up to `MyDrive/NRGA-Net_full_results/`).
-2. Paste the numbers into the revised manuscript, replacing the `[TO BE FILLED]` placeholders.
-3. Download the final checkpoint from `MyDrive/NRGA-Net_full_checkpoints/nrga_full_best.pt` and upload it to the GitHub release.
+1. All CSV tables are in `MyDrive/PhD_GIS_Security/DB_local/NRGA_Net_revised/full_tables/`.
+2. The best checkpoint is `MyDrive/PhD_GIS_Security/DB_local/NRGA_Net_revised/nrga_full_best.pt`.
+3. Send me the CSV files (or their values) and I will insert them into `NRGA-Net_paper_revised.docx`, regenerate the red-font highlighted version, and update GitHub with the final code only.
+4. No dataset or checkpoint needs to be uploaded to GitHub unless you choose to release the pretrained weights later.
 """)
 
 notebook = {
