@@ -240,6 +240,27 @@ print('Val   loader length:', len(val_loader) if 'val_loader' in globals() else 
 """)
 
 code("""# ------------------------------------------------------------------------------
+# Cell 5.5: create optimizer, scheduler, scaler, and EMA
+# Cell 5 loads the model/datasets/loss; this cell creates the training utilities
+# that are defined in the executable section of src/main.py.
+# ------------------------------------------------------------------------------
+import torch
+from torch.cuda.amp import GradScaler
+
+optimizer = optim.AdamW(build_param_groups(model, cfg),
+                        lr=float(getattr(cfg, 'LR_DECODER', 5e-4)),
+                        weight_decay=cfg.WEIGHT_DECAY)
+scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg.EPOCHS, eta_min=1e-6)
+scaler = GradScaler()
+ema = EMA(model, getattr(cfg, 'EMA_DECAY', 0.999)) if getattr(cfg, 'EMA_ENABLE', True) else None
+
+print('optimizer:', type(optimizer).__name__)
+print('scheduler:', type(scheduler).__name__)
+print('scaler:', type(scaler).__name__)
+print('ema:', ema)
+""")
+
+code("""# ------------------------------------------------------------------------------
 # Cell 6: training with checkpoint backups to Drive every few epochs
 # ------------------------------------------------------------------------------
 import torch
