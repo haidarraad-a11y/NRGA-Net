@@ -1,0 +1,95 @@
+{
+  "seed": 42,
+  "cal_frac": 0.2,
+  "splits": {
+    "train_full": {
+      "total": 0,
+      "real": 0,
+      "fake": 0,
+      "by_benchmark": {}
+    },
+    "train_quick_2k": {
+      "total": 0,
+      "real": 0,
+      "fake": 0,
+      "by_benchmark": {}
+    },
+    "calibration": {
+      "total": 0,
+      "real": 0,
+      "fake": 0,
+      "by_benchmark": {}
+    },
+    "test": {
+      "total": 0,
+      "real": 0,
+      "fake": 0,
+      "by_benchmark": {}
+    }
+  },
+  "leave_one_family_out": {
+    "lama": {
+      "train_minus": {
+        "total": 0,
+        "real": 0,
+        "fake": 0,
+        "by_benchmark": {}
+      },
+      "test": {
+        "total": 0,
+        "real": 0,
+        "fake": 0,
+        "by_benchmark": {}
+      }
+    },
+    "repaint": {
+      "train_minus": {
+        "total": 0,
+        "real": 0,
+        "fake": 0,
+        "by_benchmark": {}
+      },
+      "test": {
+        "total": 0,
+        "real": 0,
+        "fake": 0,
+        "by_benchmark": {}
+      }
+    },
+    "latent_diffusion": {
+      "train_minus": {
+        "total": 0,
+        "real": 0,
+        "fake": 0,
+        "by_benchmark": {}
+      },
+      "test": {
+        "total": 0,
+        "real": 0,
+        "fake": 0,
+        "by_benchmark": {}
+      }
+    }
+  },
+  "files": {
+    "train_full": "D:\\Dataset\\pp3\\NRGA-Net\\splits\\train_full.csv",
+    "train_quick_2k": "D:\\Dataset\\pp3\\NRGA-Net\\splits\\train_quick_2k.csv",
+    "calibration": "D:\\Dataset\\pp3\\NRGA-Net\\splits\\calibration.csv",
+    "test": "D:\\Dataset\\pp3\\NRGA-Net\\splits\\test.csv",
+    "loo": {
+      "lama": {
+        "train_minus": "D:\\Dataset\\pp3\\NRGA-Net\\splits\\leave_one_family_out\\train_minus_lama.csv",
+        "test": "D:\\Dataset\\pp3\\NRGA-Net\\splits\\leave_one_family_out\\test_lama.csv"
+      },
+      "repaint": {
+        "train_minus": "D:\\Dataset\\pp3\\NRGA-Net\\splits\\leave_one_family_out\\train_minus_repaint.csv",
+        "test": "D:\\Dataset\\pp3\\NRGA-Net\\splits\\leave_one_family_out\\test_repaint.csv"
+      },
+      "latent_diffusion": {
+        "train_minus": "D:\\Dataset\\pp3\\NRGA-Net\\splits\\leave_one_family_out\\train_minus_latent_diffusion.csv",
+        "test": "D:\\Dataset\\pp3\\NRGA-Net\\splits\\leave_one_family_out\\test_latent_diffusion.csv"
+      }
+    }
+  },
+  "note": "Calibration set is used for temperature/threshold/uncertainty-bound fitting; final-test set is used only for reported metrics."
+}

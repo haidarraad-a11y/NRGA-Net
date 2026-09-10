@@ -448,6 +448,22 @@ os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 print('Dataset paths:', {k: list(v.keys()) for k, v in cfg.DATASET_PATHS.items()})
 print('Output:', cfg.OUTPUT_DIR)
 
+# ---------------------------------------------------------------------
+# Quick-mode overrides for the fast Colab table notebook.
+# Set NRGA_QUICK_MODE=1 before importing/running this script to reduce
+# training time and disable expensive stages.
+# ---------------------------------------------------------------------
+if os.environ.get('NRGA_QUICK_MODE', '0') == '1':
+    cfg.EPOCHS = int(os.environ.get('NRGA_QUICK_EPOCHS', 30))
+    cfg.FT384_ENABLE = False
+    cfg.FT384_EPOCHS = 0
+    cfg.BATCH_SIZE = int(os.environ.get('NRGA_QUICK_BATCH', 4))
+    cfg.NUM_WORKERS = 0
+    cfg.TTA_MS_EVAL = os.environ.get('NRGA_QUICK_TTA', '0') == '1'
+    cfg.DGT_ENABLE = False
+    cfg.CBFH_REGISTER_REALS_ONLY = False
+    print(f'[QUICK MODE] epochs={cfg.EPOCHS} batch={cfg.BATCH_SIZE} FT384={cfg.FT384_ENABLE}')
+
 # ======================================================================
 # 4. Dataset (same as before)
 # ======================================================================
@@ -2668,6 +2684,12 @@ def validate(model, loader, criterion, tta_ms=False):
     else:
         m['prov_match_dist'] = 0.0; m['prov_nonmatch_dist'] = 0.0; m['prov_verify_acc'] = 0.0
     return m, all_probs, all_labels
+
+# --- NRGA-NOTEBOOK-DEFINITIONS-END ---
+# Everything above this line is definitions; everything below is top-level
+# executable training/evaluation code.  The Colab quick-table notebook uses
+# exec() on the prefix above this marker to import the model, losses, and
+# validation helpers without triggering the full training run.
 
 # ======================================================================
 # 9. Run Training
