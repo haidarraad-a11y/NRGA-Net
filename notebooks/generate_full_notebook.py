@@ -202,14 +202,33 @@ def copy_rows(csv_path, split_name, quick_root):
         copied += 1
     return copied
 
+
+def count_images(root):
+    \"\"\"Count image files under root.\"\"\"
+    root = Path(root)
+    if not root.exists():
+        return 0
+    return sum(1 for p in root.rglob('*') if p.suffix.lower() in {'.png','.jpg','.jpeg','.bmp','.tif','.tiff'})
+
+
+n_work_existing = count_images(WORK_ROOT)
+n_test_existing = count_images(TEST_ROOT)
+print(f'Local SSD already has {n_work_existing} train/cal images and {n_test_existing} test images.')
+
 # Full training + calibration (used as train / val by main.py)
-n_train = copy_rows(f'{REPO_ROOT}/splits/train_full.csv', 'train', WORK_ROOT)
-n_cal   = copy_rows(f'{REPO_ROOT}/splits/calibration.csv', 'val', WORK_ROOT)
-print(f'Copied {n_train} training + {n_cal} calibration images to local SSD.')
+if n_work_existing < 100:
+    n_train = copy_rows(f'{REPO_ROOT}/splits/train_full.csv', 'train', WORK_ROOT)
+    n_cal   = copy_rows(f'{REPO_ROOT}/splits/calibration.csv', 'val', WORK_ROOT)
+    print(f'Copied {n_train} training + {n_cal} calibration images to local SSD.')
+else:
+    print('Train/cal data already on local SSD -- skipping copy.')
 
 # Final-test set in separate tree
-n_test = copy_rows(f'{REPO_ROOT}/splits/test.csv', 'val', TEST_ROOT)
-print(f'Copied {n_test} final-test images to local SSD.')
+if n_test_existing < 50:
+    n_test = copy_rows(f'{REPO_ROOT}/splits/test.csv', 'val', TEST_ROOT)
+    print(f'Copied {n_test} final-test images to local SSD.')
+else:
+    print('Final-test data already on local SSD -- skipping copy.')
 """)
 
 code("""# ------------------------------------------------------------------------------
