@@ -156,7 +156,7 @@ PARAGRAPH_REVISIONS = [
     # Section 5.1
     {
         "search": "The model is trained once, jointly, on the training splits of Fake-Vaihingen, Fake-LoveDA, and Fake-LocalDiff, and is evaluated on the three held-out test splits, a joint validation pool of 2,478 forged and 1,367 authentic images.",
-        "replace": "The model is trained once, jointly, on the training splits of Fake-Vaihingen, Fake-LoveDA, and Fake-LocalDiff. The held-out images are partitioned deterministically (seed\u202f=\u202f42) into a calibration split (20\u202f%) and a final-test split (80\u202f%). The calibration split is used for temperature scaling, mask-threshold sweep, uncertainty-bound fitting, and checkpoint selection; the final-test split is used only for the reported results and is never used for any post-hoc parameter. Table 2 summarizes the resulting partition.",
+        "replace": "The model is trained once, jointly, on the training splits of Fake-Vaihingen, Fake-LoveDA, and Fake-LocalDiff. The held-out images are partitioned deterministically (seed\u202f=\u202f42) into a calibration split (20\u202f%) and a final-test split (80\u202f%). The calibration split is used for temperature scaling, mask-threshold sweep, uncertainty-bound fitting, and checkpoint selection; the final-test split is used only for the reported results and is never used for any post-hoc parameter. Table 2a summarizes the resulting partition.",
     },
     # Section 5.1 last paragraph
     {
@@ -332,14 +332,102 @@ def apply_ijies_formatting(doc):
             cols[0].set(qn('w:num'), '2')
 
 
+def add_split_table(doc, red=False):
+    """Insert a split-count table before Section 5.2."""
+    # Find target paragraph
+    target = None
+    for p in doc.paragraphs:
+        if p.text.strip().startswith("5.2 Implementation Details"):
+            target = p
+            break
+    if target is None:
+        return
+    # Create table element before target
+    table = doc.add_table(rows=5, cols=4)
+    table.style = "Table Grid"
+    headers = ["Split", "Forged images", "Authentic images", "Total"]
+    for j, h in enumerate(headers):
+        set_cell_text(table.rows[0].cells[j], h, red=red)
+    data = [
+        ["Train", "[TO BE FILLED]", "[TO BE FILLED]", "[TO BE FILLED]"],
+        ["Calibration", "[TO BE FILLED]", "[TO BE FILLED]", "[TO BE FILLED]"],
+        ["Final test", "[TO BE FILLED]", "[TO BE FILLED]", "[TO BE FILLED]"],
+        ["Total", "[TO BE FILLED]", "[TO BE FILLED]", "[TO BE FILLED]"],
+    ]
+    for i, row in enumerate(data, start=1):
+        for j, val in enumerate(row):
+            set_cell_text(table.rows[i].cells[j], val, red=red)
+    target._element.addprevious(table._element)
+    caption = doc.add_paragraph("Table 2a. Deterministic train/calibration/final-test split.")
+    if red:
+        mark_paragraph_red(caption)
+    target._element.addprevious(caption._element)
+
+
+def add_conflicts_and_contributions(doc, red=False):
+    """Update existing Conflicts of Interest and Author Contributions sections if present; otherwise append."""
+    # Find existing headings
+    existing_conflicts = None
+    existing_contrib_heading = None
+    existing_contrib_text = None
+    for i, p in enumerate(doc.paragraphs):
+        txt = p.text.strip()
+        if txt == "Conflicts of Interest":
+            existing_conflicts = i
+        elif txt == "Author Contributions":
+            existing_contrib_heading = i
+            if i + 1 < len(doc.paragraphs):
+                existing_contrib_text = i + 1
+    if existing_conflicts is not None and existing_contrib_text is not None:
+        # Replace text of following paragraphs
+        replace_paragraph_text(doc.paragraphs[existing_conflicts + 1], "The authors declare no conflict of interest.")
+        contrib = (
+            "Conceptualization, Haidar Raad Shakir and Asmaa Sadiq Abdul Jabar; "
+            "methodology, Haidar Raad Shakir; software, Haidar Raad Shakir; "
+            "validation, Haidar Raad Shakir and Asmaa Sadiq Abdul Jabar; "
+            "formal analysis, Haidar Raad Shakir; investigation, Haidar Raad Shakir; "
+            "resources, Asmaa Sadiq Abdul Jabar; data curation, Haidar Raad Shakir; "
+            "writing—original draft preparation, Haidar Raad Shakir; "
+            "writing—review and editing, Asmaa Sadiq Abdul Jabar; "
+            "visualization, Haidar Raad Shakir; supervision, Asmaa Sadiq Abdul Jabar; "
+            "project administration, Asmaa Sadiq Abdul Jabar."
+        )
+        replace_paragraph_text(doc.paragraphs[existing_contrib_text], contrib)
+        if red:
+            mark_paragraph_red(doc.paragraphs[existing_conflicts + 1])
+            mark_paragraph_red(doc.paragraphs[existing_contrib_text])
+        return
+    # Fallback append
+    p0 = doc.add_paragraph()
+    r0 = p0.add_run("Conflicts of Interest")
+    r0.bold = True
+    r0.font.size = Pt(14)
+    if red:
+        r0.font.color.rgb = RGBColor(255, 0, 0)
+    p1 = doc.add_paragraph("The authors declare no conflict of interest.")
+    if red:
+        mark_paragraph_red(p1)
+    p2 = doc.add_paragraph()
+    r2 = p2.add_run("Author Contributions")
+    r2.bold = True
+    r2.font.size = Pt(14)
+    if red:
+        r2.font.color.rgb = RGBColor(255, 0, 0)
+    p3 = doc.add_paragraph(contrib)
+    if red:
+        mark_paragraph_red(p3)
+
+
 def apply_revisions(doc, red=False):
     apply_paragraph_revisions(doc, red=red)
     apply_table4_fixes(doc, red=red)
     apply_table7_fixes(doc, red=red)
+    add_split_table(doc, red=red)
     add_new_sections(doc, red=red)
     add_related_work_signet(doc, red=red)
     add_code_availability(doc, red=red)
     add_signet_reference(doc, red=red)
+    add_conflicts_and_contributions(doc, red=red)
     apply_ijies_formatting(doc)
 
 
