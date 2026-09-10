@@ -108,7 +108,7 @@ def main():
 
     add_response(doc,
         "10. The presentation of figures is not professional. In figures, letters are small and blurry. The authors should enlarge or redraw figures. See Fig. 1, etc.",
-        "We acknowledge the figure quality issue. All figures have been regenerated at higher resolution (fonts enlarged to at least 10 pt) and are placed in single-column layout without outer borders, following the IJIES format guidelines. The revised figures are included in the manuscript and the source PNGs are available in the repository's figures/ directory.")
+        "We acknowledge the figure quality issue. All figures in the manuscript have been reformatted to single-column layout without outer borders and with captions set to at least 10 pt, following the IJIES guidelines. High-resolution replacements for the architecture and qualitative figures are generated from the code pipeline (src/main.py and the figure-export utilities in the repository) and will be inserted as final camera-ready assets.")
 
     add_heading(doc, "2nd Reviewer", level=1)
 
