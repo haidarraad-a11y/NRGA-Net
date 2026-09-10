@@ -23,27 +23,28 @@ def code(text):
     CELLS.append({"cell_type": "code", "metadata": {}, "source": text.splitlines(keepends=True)})
 
 
-md("""# NRGA-Net — Full-dataset table generator (Colab Pro+)
+md("""# NRGA-Net — Full-dataset table generator (Colab Pro+, Drive-only)
 
-This notebook trains NRGA-Net on the **complete training split** and evaluates on the independent final-test split to produce the final publication tables.
+This notebook trains NRGA-Net on the **complete training split** stored in your Google Drive and evaluates on the independent final-test split. **No dataset is uploaded to GitHub.** Only the code comes from GitHub; your data stays in Drive.
 
 **Recommended runtime:** GPU (A100 or V100), High-RAM enabled.
 
 **What it does:**
-1. Clones the NRGA-Net repository.
-2. Generates deterministic `train / calibration / final-test` splits.
-3. Copies the full training set + calibration + final-test into local SSD (`/content`).
-4. Runs the full training run: main stage at 256 px + optional 384 px fine-tune.
-5. Saves best checkpoints to Google Drive every few epochs.
-6. Evaluates on the final-test set and produces Tables 3–9.
+1. Clones the NRGA-Net repository (code only).
+2. Mounts your Google Drive.
+3. Generates deterministic `train / calibration / final-test` splits from the Drive dataset.
+4. Copies the full training set + calibration + final-test into Colab local SSD (`/content`) for fast training.
+5. Runs the full training run and saves checkpoints to Drive every few epochs.
+6. Evaluates on the final-test set and produces Tables 3–9, saved back to Drive.
 
 **After running:**
-- Replace the placeholder numbers in the manuscript with the CSV files saved under `results/full_tables/`.
-- Download the final checkpoint from your Drive for the repository release.
+- All CSV tables are in `MyDrive/NRGA-Net_full_results/`.
+- The best checkpoint is in `MyDrive/NRGA-Net_full_checkpoints/`.
+- Replace the `[TO BE FILLED]` placeholders in the manuscript with these numbers.
 """)
 
 code(f"""# ------------------------------------------------------------------------------
-# Cell 1: clone repository and install dependencies
+# Cell 1: clone repository and install dependencies (code only, no data)
 # ------------------------------------------------------------------------------
 !git clone --depth 1 {REPO} NRGA-Net
 %cd NRGA-Net
@@ -51,39 +52,72 @@ code(f"""# ---------------------------------------------------------------------
 """)
 
 code("""# ------------------------------------------------------------------------------
-# Cell 2: mount Google Drive and configure full run
+# Cell 2: mount Google Drive and configure paths
 # ------------------------------------------------------------------------------
 from google.colab import drive
 drive.mount('/content/drive')
 
-# Change this to the folder that contains Fake-Vaihingen, Fake-LoveDA, Local_Diffusion
+# ============================================================================
+# EDIT ONLY THIS BLOCK to match your Drive layout
+# ============================================================================
+# This should be the folder that contains Fake-Vaihingen, Fake-LoveDA, Local_Diffusion
 DATA_ROOT = '/content/drive/MyDrive/PhD_GIS_Security/DB_local'
+
+# Where to copy data inside Colab for fast SSD access (temporary)
 WORK_ROOT = '/content/nrga_full_root'
 TEST_ROOT = '/content/nrga_full_root_test'
-REPO_ROOT = '/content/NRGA-Net'
+
+# Where to save checkpoints and results permanently (Google Drive)
 DRIVE_SAVE_DIR = '/content/drive/MyDrive/NRGA-Net_full_checkpoints'
+DRIVE_RESULTS_DIR = '/content/drive/MyDrive/NRGA-Net_full_results'
+
+# Repository path inside Colab (code only)
+REPO_ROOT = '/content/NRGA-Net'
+# ============================================================================
 
 import os
 os.environ['NRGA_DATA_ROOT'] = WORK_ROOT
 os.environ['NRGA_TEST_ROOT'] = TEST_ROOT
-
-# Full-mode settings (no quick restrictions)
-os.environ['NRGA_QUICK_MODE'] = '0'
-
-# You can override main.py defaults via environment variables if you added support,
-# otherwise edit Config near the top of src/main.py.
-# EPOCHS / BATCH_SIZE / FT384 are taken from src/main.py Config by default.
+os.environ['NRGA_QUICK_MODE'] = '0'   # full run, no shortcuts
 
 print('DATA_ROOT:', DATA_ROOT)
 print('WORK_ROOT:', WORK_ROOT)
 print('TEST_ROOT:', TEST_ROOT)
 print('DRIVE_SAVE_DIR:', DRIVE_SAVE_DIR)
+print('DRIVE_RESULTS_DIR:', DRIVE_RESULTS_DIR)
 """)
 
 code("""# ------------------------------------------------------------------------------
-# Cell 3: generate deterministic splits
+# Cell 3: validate dataset layout and generate deterministic splits
 # ------------------------------------------------------------------------------
 import subprocess, sys, json
+from pathlib import Path
+
+expected = [
+    'Fake-Vaihingen/real/train',
+    'Fake-Vaihingen/fake/train/lama',
+    'Fake-Vaihingen/fake/train/repaint',
+    'Fake-LoveDA/real/train',
+    'Fake-LoveDA/fake/train/lama',
+    'Fake-LoveDA/fake/train/repaint',
+    'Local_Diffusion/real/train',
+    'Local_Diffusion/fake/train',
+]
+
+missing = []
+for rel in expected:
+    p = Path(DATA_ROOT) / rel
+    if not p.exists():
+        missing.append(str(p))
+
+if missing:
+    print('WARNING: the following expected folders are missing:')
+    for m in missing:
+        print('  ', m)
+    print('Please check DATA_ROOT in Cell 2.')
+else:
+    print('Dataset layout looks correct.')
+
 subprocess.run([sys.executable, 'scripts/create_splits.py',
                 '--root', DATA_ROOT,
                 '--seed', '42',
@@ -101,16 +135,17 @@ code("""# ----------------------------------------------------------------------
 import shutil, csv, os
 from pathlib import Path
 
-REPO_ROOT = '/content/NRGA-Net'
+DATA_ROOT = '/content/drive/MyDrive/PhD_GIS_Security/DB_local'
 WORK_ROOT = '/content/nrga_full_root'
 TEST_ROOT = '/content/nrga_full_root_test'
-DATA_ROOT = '/content/drive/MyDrive/PhD_GIS_Security/DB_local'
+REPO_ROOT = '/content/NRGA-Net'
 
 def copy_rows(csv_path, split_name, quick_root):
     \"\"\"Copy images listed in a split CSV into the folder layout expected by src/main.py.\"\"\"
     quick_root = Path(quick_root)
     with open(csv_path, newline='') as f:
         rows = list(csv.DictReader(f))
+    copied = 0
     for r in rows:
         src = Path(r['path'])
         if not src.exists():
@@ -154,15 +189,17 @@ def copy_rows(csv_path, split_name, quick_root):
         if mask_src and Path(mask_src).exists() and mask_dst_dir is not None:
             msrc = Path(mask_src)
             shutil.copy2(msrc, mask_dst_dir / (src.stem + msrc.suffix))
+        copied += 1
+    return copied
 
 # Full training + calibration (used as train / val by main.py)
-copy_rows(f'{REPO_ROOT}/splits/train_full.csv', 'train', WORK_ROOT)
-copy_rows(f'{REPO_ROOT}/splits/calibration.csv', 'val', WORK_ROOT)
-print('Full training + calibration copied.')
+n_train = copy_rows(f'{REPO_ROOT}/splits/train_full.csv', 'train', WORK_ROOT)
+n_cal   = copy_rows(f'{REPO_ROOT}/splits/calibration.csv', 'val', WORK_ROOT)
+print(f'Copied {n_train} training + {n_cal} calibration images to local SSD.')
 
 # Final-test set in separate tree
-copy_rows(f'{REPO_ROOT}/splits/test.csv', 'val', TEST_ROOT)
-print('Final-test copied to', TEST_ROOT)
+n_test = copy_rows(f'{REPO_ROOT}/splits/test.csv', 'val', TEST_ROOT)
+print(f'Copied {n_test} final-test images to local SSD.')
 """)
 
 code("""# ------------------------------------------------------------------------------
@@ -209,8 +246,11 @@ if drive_best_path.exists():
     print('Resuming from Drive checkpoint:', drive_best_path)
     ckpt = torch.load(drive_best_path, map_location=DEVICE, weights_only=False)
     model.load_state_dict(ckpt['model_state'])
+    start_epoch = ckpt.get('epoch', 0) + 1
+else:
+    start_epoch = 1
 
-for epoch in range(1, cfg.EPOCHS + 1):
+for epoch in range(start_epoch, cfg.EPOCHS + 1):
     model.train()
     train_loss = train_one_epoch(model, train_loader, optimizer, scaler, criterion, ema=ema)
     if ema is not None:
@@ -597,16 +637,26 @@ print('\\nAll CSV tables saved to:', results_dir)
 """)
 
 code("""# ------------------------------------------------------------------------------
-# Cell 15: upload final results to Drive
+# Cell 16: upload final results to Drive
 # ------------------------------------------------------------------------------
 import shutil
 from pathlib import Path
 
-DRIVE_RESULTS = '/content/drive/MyDrive/NRGA-Net_full_results'
-Path(DRIVE_RESULTS).mkdir(parents=True, exist_ok=True)
+DRIVE_RESULTS_DIR = '/content/drive/MyDrive/NRGA-Net_full_results'
+Path(DRIVE_RESULTS_DIR).mkdir(parents=True, exist_ok=True)
 results_dir = Path('/content/NRGA-Net/results/full_tables')
-shutil.copytree(results_dir, Path(DRIVE_RESULTS) / 'full_tables', dirs_exist_ok=True)
-print('Results uploaded to:', DRIVE_RESULTS)
+shutil.copytree(results_dir, Path(DRIVE_RESULTS_DIR) / 'full_tables', dirs_exist_ok=True)
+
+# Also copy the best checkpoint one more time to be safe
+DRIVE_SAVE_DIR = '/content/drive/MyDrive/NRGA-Net_full_checkpoints'
+best_path = Path('/content/NRGA-Net') / cfg.OUTPUT_DIR / 'nrga_full_best.pt'
+if best_path.exists():
+    shutil.copy2(best_path, Path(DRIVE_SAVE_DIR) / 'nrga_full_best.pt')
+
+print('Results uploaded to:', DRIVE_RESULTS_DIR)
+print('Best checkpoint in:', DRIVE_SAVE_DIR)
+print('\\nYou can now download the CSV tables and checkpoint from your Google Drive.')
+print('No data has been uploaded to GitHub.')
 """)
 
 md("""## Next steps
