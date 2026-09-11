@@ -227,7 +227,7 @@ else:
 
 for epoch in range(start_epoch, cfg.EPOCHS + 1):
     model.train()
-    train_loss = train_one_epoch(model, train_loader, optimizer, scaler, criterion, ema=ema)
+    train_loss, _ = train_one_epoch(model, train_loader, optimizer, scaler, criterion, ema=ema)
     if ema is not None:
         ema.apply_to(model)
     val_m, *_ = validate(model, val_loader, criterion, tta_ms=False)
@@ -235,9 +235,9 @@ for epoch in range(start_epoch, cfg.EPOCHS + 1):
         ema.restore(model)
 
     score = val_m.get('pooled_iou', val_m.get('mean_iou', 0.0))
-    history['train_loss'].append(train_loss)
+    history['train_loss'].append(train_loss.get('total', 0.0))
     history['val_pooled_iou'].append(score)
-    print(f'Epoch {epoch:02d}/{cfg.EPOCHS}  train_loss={train_loss:.4f}  '
+    print(f'Epoch {epoch:02d}/{cfg.EPOCHS}  train_loss={train_loss.get("total",0):.4f}  '
           f'val_pooled_iou={score:.4f}  val_det_acc={val_m.get(\"accuracy\",0):.4f}')
 
     if score > best_score:
