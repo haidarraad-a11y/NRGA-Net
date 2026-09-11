@@ -229,10 +229,10 @@ for epoch in range(start_epoch, cfg.EPOCHS + 1):
     model.train()
     train_loss = train_one_epoch(model, train_loader, optimizer, scaler, criterion, ema=ema)
     if ema is not None:
-        ema.apply_shadow()
+        ema.apply_to(model)
     val_m, *_ = validate(model, val_loader, criterion, tta_ms=False)
     if ema is not None:
-        ema.restore()
+        ema.restore(model)
 
     score = val_m.get('pooled_iou', val_m.get('mean_iou', 0.0))
     history['train_loss'].append(train_loss)
@@ -341,13 +341,13 @@ import torch
 
 model.eval()
 if ema is not None:
-    ema.apply_shadow()
+    ema.apply_to(model)
 
 m_single, probs_single, labels_single = validate(model, test_loader, criterion, tta_ms=False)
 m_tta,   probs_tta,   labels_tta   = validate(model, test_loader, criterion, tta_ms=True)
 
 if ema is not None:
-    ema.restore()
+    ema.restore(model)
 
 def make_table4(m):
     dss = m.get('_datasets') or list(cfg.DATASET_PATHS.keys())
