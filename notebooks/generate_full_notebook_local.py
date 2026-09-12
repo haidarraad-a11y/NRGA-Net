@@ -453,7 +453,11 @@ def build_loader_from_split(csv_path, tag, img_size=None):
         shutil.rmtree(base)
     dss, names = [], []
     for (bench, fam), items in sorted(groups.items()):
-        gname = f'{bench}-{fam}' if fam != 'real' else bench
+        # match cfg.DATASET_PATHS keys: Local_Diffusion carries no family suffix
+        if bench == 'Fake-LocalDiff':
+            gname = 'Local_Diffusion'
+        else:
+            gname = f'{bench}-{fam}' if fam != 'real' else bench
         rd, fd, md = base / gname / 'real', base / gname / 'fake', base / gname / 'mask'
         _link_all(rd, [(p, f'{i:05d}_{Path(p).name}') for i, p in enumerate(items['real'])])
         with_mask = [(p, m) for (p, m) in items['fake'] if m is not None]
