@@ -174,6 +174,10 @@ cfg.OUTPUT_DIR = RUN_OUTPUT_DIR
 os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 print('OUTPUT_DIR overridden to:', cfg.OUTPUT_DIR)
 
+# Reduced epoch budget: resume-capable runs stop at 100 instead of 200.
+cfg.EPOCHS = 100
+print('EPOCHS overridden to:', cfg.EPOCHS)
+
 print('Definitions loaded.')
 print('Train loader length:', len(train_loader) if 'train_loader' in globals() else 'N/A')
 print('Val   loader length:', len(val_loader) if 'val_loader' in globals() else 'N/A')
