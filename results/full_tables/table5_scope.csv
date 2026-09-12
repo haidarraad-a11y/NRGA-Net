@@ -1,0 +1,7 @@
+Aspect,FLDCF [8],FECDNet [9],NRGA-Net (ours)
+Benchmarks covered,"Fake-Vaihingen, Fake-LoveDA","Fake-Vaihingen, Fake-LoveDA, Fake-HRCUS","Fake-Vaihingen, Fake-LoveDA, Fake-LocalDiff"
+Generator families,"LaMa, RePaint","LaMa, RePaint, ZITS","LaMa, RePaint, latent diffusion"
+Models trained,One per benchmark,One per benchmark,One joint model
+Cross-generator evidence,Not reported,Not reported,Table 9 (leave-one-family-out)
+Image-level detection,Separate ResNet-50,Not addressed,99.22% accuracy (final test)
+Joint pooled IoU / F1,Not reported,Not reported,97.66% / 98.82%

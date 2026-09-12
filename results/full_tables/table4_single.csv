@@ -1,0 +1,8 @@
+Dataset,Precision,Recall,F1,Dice,IoU
+Fake-Vaihingen-lama,96.1,97.72,96.9,96.9,93.99
+Fake-Vaihingen-repaint,93.97,94.79,94.38,94.38,89.35
+Fake-LoveDA-lama,97.96,98.59,98.28,98.28,96.61
+Fake-LoveDA-repaint,98.35,99.09,98.72,98.72,97.47
+Local_Diffusion,98.64,99.42,99.03,99.03,98.08
+Overall (pooled forged-only),98.07,98.85,98.46,98.46,96.96
+Overall (incl. real FP),97.68,98.85,98.26,98.26,96.58

@@ -1,0 +1,8 @@
+Quantity,Value
+Fitted temperature T (calibration split),0.5000
+Deployed mask threshold after sweep,0.5
+Stochastic passes for uncertainty,20 (MC dropout)
+Images routed to expert review,4 / 3076 (0.1%)
+Accuracy on auto-decided images,99.28%
+Accuracy on abstained images,50.00%
+Overall detection accuracy,99.22%

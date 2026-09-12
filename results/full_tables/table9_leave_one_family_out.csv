@@ -1,0 +1,4 @@
+Held-out family,Train families,Test samples,IoU (zero-shot),F1 (zero-shot)
+lama,repaint + latent_diffusion,1409,[retrain on train-minus-lama],[retrain on train-minus-lama]
+repaint,lama + latent_diffusion,1403,[retrain on train-minus-repaint],[retrain on train-minus-repaint]
+latent_diffusion,lama + repaint,1600,[retrain on train-minus-latent_diffusion],[retrain on train-minus-latent_diffusion]

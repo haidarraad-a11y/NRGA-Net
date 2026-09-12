@@ -1,0 +1,5 @@
+Item,Value,Item2,Value2
+calibration,769 total,274 real,495 fake
+final test,3076 total,1093 real,1983 fake
+selected checkpoint,epoch 100 (256 px),selection criterion,calibration pooled IoU 0.9641
+384 px final-epoch model (comparison),calibration pooled IoU 0.9634,not selected,

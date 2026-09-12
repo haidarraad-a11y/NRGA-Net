@@ -1,0 +1,10 @@
+Configuration,Fake-Vaihingen-lama,Fake-Vaihingen-repaint,Fake-LoveDA-lama,Fake-LoveDA-repaint,Local_Diffusion,Overall
+"Full model, single pass",93.99,89.35,96.61,97.47,98.08,96.58
+"Full model, +TTA",95.58,91.75,97.63,98.04,98.71,97.66
+- spectral edge stream (SES),[retrain required],[retrain required],[retrain required],[retrain required],[retrain required],[retrain required]
+- frequency residual encoder (FRE),[retrain required],[retrain required],[retrain required],[retrain required],[retrain required],[retrain required]
+- deformable attention in FDA,[retrain required],[retrain required],[retrain required],[retrain required],[retrain required],[retrain required]
+- content-based forensic hash (CBFH),[retrain required],[retrain required],[retrain required],[retrain required],[retrain required],[retrain required]
+- edge supervision,[retrain required],[retrain required],[retrain required],[retrain required],[retrain required],[retrain required]
+- distortion-bank augmentation,[retrain required],[retrain required],[retrain required],[retrain required],[retrain required],[retrain required]
+"Multi-seed std (3 seeds, full model)",pending,pending,pending,pending,pending,pending
