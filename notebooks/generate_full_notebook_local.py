@@ -268,13 +268,149 @@ print('Best checkpoint loaded from', best_path)
 """)
 
 code("""# ------------------------------------------------------------------------------
-# Cell 7: optional 384 px fine-tune (if enabled in Config)
-# -----------------------------------------------------------------------------
-if getattr(cfg, 'FT384_ENABLE', False) and 'ft_train_loader' in globals():
-    print('Starting 384 px fine-tune stage...')
-    pass
+# Cell 7: optional 384 px fine-tune -- starts from the saved 256 best checkpoint,
+# so the 256 training does NOT need to be re-run. Resumable across disconnects.
+# ------------------------------------------------------------------------------
+import copy as _copy, time
+from pathlib import Path
+from torch.utils.data import DataLoader, ConcatDataset
+from torch.cuda.amp import GradScaler
+
+if not getattr(cfg, 'FT384_ENABLE', True):
+    print('FT384_ENABLE=False -> skipping 384 fine-tune; evaluation will use the 256 model.')
 else:
-    print('384 px fine-tune disabled or helpers not exposed; skipping.')
+    FT_SIZE   = int(getattr(cfg, 'FT384_IMG_SIZE', 384))
+    FT_EPOCHS = int(getattr(cfg, 'FT384_EPOCHS', 40))
+    FT_LR     = float(getattr(cfg, 'FT384_LR', 2e-5))
+    FT_BATCH  = int(getattr(cfg, 'FT384_BATCH', 3))
+    FT_ACCUM  = int(getattr(cfg, 'FT384_ACCUM', 2))
+    FT_PAT    = int(getattr(cfg, 'FT384_PATIENCE', 4))
+
+    best256_path = Path(RUN_OUTPUT_DIR) / 'nrga_full_best.pt'
+    best384_path = Path(RUN_OUTPUT_DIR) / 'nrga_full_384_best.pt'
+    last384_path = Path(RUN_OUTPUT_DIR) / 'nrga_full_384_last.pt'
+    assert best256_path.exists(), '256 best checkpoint not found - run Cell 6 first'
+
+    # 384 datasets built from the same Drive folders as the 256 stage
+    _tr384, _va384 = [], []
+    _seen384 = {'train': set(), 'val': set()}
+    for ds_name, splits in cfg.DATASET_PATHS.items():
+        for split_name, split_key, ds_list, do_aug in [('train', 'train', _tr384, True),
+                                                       ('val', 'val', _va384, False)]:
+            if split_key in splits:
+                paths = splits[split_key]
+                _rk = os.path.realpath(str(paths['real']))
+                _lr = (not getattr(cfg, 'DEDUPE_REALS', True)) or (_rk not in _seen384[split_name])
+                _seen384[split_name].add(_rk)
+                ds_list.append(InpaintingSegDataset(
+                    real_dir=paths['real'], fake_dir=paths['fake'], mask_dir=paths['mask'],
+                    dataset_name=ds_name, split=split_name, img_size=FT_SIZE,
+                    augment=do_aug, native_crop=getattr(cfg, 'NATIVE_CROP', False),
+                    load_reals=_lr))
+    train_loader384 = DataLoader(ConcatDataset(_tr384), batch_size=FT_BATCH, shuffle=True,
+                                 num_workers=cfg.NUM_WORKERS, pin_memory=True, drop_last=True)
+    val_loader384 = DataLoader(ConcatDataset(_va384), batch_size=FT_BATCH, shuffle=False,
+                               num_workers=cfg.NUM_WORKERS, pin_memory=True)
+    print(f'384 loaders: {len(train_loader384)} train batches, {len(val_loader384)} val batches')
+
+    cfg384 = _copy.copy(cfg)
+    cfg384.IMG_SIZE = FT_SIZE
+    cfg384.BATCH_SIZE = FT_BATCH
+    model384 = NRGANet(cfg384).to(DEVICE)
+    _ck = torch.load(best256_path, map_location=DEVICE, weights_only=False)
+    model384.load_state_dict(_ck['model_state'])
+    if sanitize_state_(model384) > 0:
+        print(' WARNING: the 256 base checkpoint contained non-finite tensors (neutralised).')
+    print(f'Loaded 256 best (epoch {_ck.get("epoch", "?")}) -> fine-tuning at {FT_SIZE}px')
+    for _name in ('content_prior', 'masked_prior'):
+        _m = getattr(model384, _name, None)
+        if _m is not None:
+            _m.eval()
+            for _p in _m.parameters():
+                _p.requires_grad = False
+    if hasattr(model384.cbfh, 'set_temperature'):
+        model384.cbfh.set_temperature()
+
+    _cfg_ft = _copy.copy(cfg)
+    _cfg_ft.LR_ENCODER = FT_LR
+    _cfg_ft.LR_DECODER = FT_LR * float(getattr(cfg, 'FT384_DECODER_MULT', 10.0))
+    opt384 = optim.AdamW(build_param_groups(model384, _cfg_ft),
+                         lr=_cfg_ft.LR_DECODER, weight_decay=cfg.WEIGHT_DECAY)
+    sched384 = optim.lr_scheduler.CosineAnnealingLR(opt384, T_max=FT_EPOCHS, eta_min=1e-6)
+    scaler384 = GradScaler()
+    ema384 = EMA(model384, getattr(cfg, 'EMA_DECAY', 0.999)) if getattr(cfg, 'EMA_ENABLE', True) else None
+    crit384 = NRGALoss(cfg384).to(DEVICE)
+
+    best384_score, patience384, start384 = -1.0, 0, 1
+    if getattr(cfg, 'RESUME', True) and last384_path.exists() and not getattr(cfg, 'FT384_RESET', False):
+        _r4 = torch.load(last384_path, map_location=DEVICE, weights_only=False)
+        _bad4 = [k for k, v in _r4['model_state'].items()
+                 if torch.is_floating_point(v) and not bool(torch.isfinite(v).all())]
+        if _bad4:
+            print(f'>>> FT384 resume file has {len(_bad4)} non-finite tensors -> restarting from 256 base')
+        else:
+            model384.load_state_dict(_r4['model_state'])
+            opt384.load_state_dict(_r4['optim_state'])
+            sched384.load_state_dict(_r4['sched_state'])
+            scaler384.load_state_dict(_r4['scaler_state'])
+            if ema384 is not None and _r4.get('ema_shadow') is not None:
+                ema384.shadow = {k: v.to(DEVICE) for k, v in _r4['ema_shadow'].items()}
+                ema384.updates = int(_r4.get('ema_updates', 0))
+                sanitize_ema_(ema384)
+            start384 = int(_r4['epoch']) + 1
+            best384_score = float(_r4.get('best_score', -1.0))
+            patience384 = int(_r4.get('patience', 0))
+            print(f'>>> FT384 resumed at epoch {start384} (best score {best384_score:.4f})')
+
+    print(f'384 fine-tune: {FT_EPOCHS} epochs | batch {FT_BATCH}x{FT_ACCUM} accum | lr {FT_LR} | patience {FT_PAT}')
+    for epoch in range(start384, FT_EPOCHS + 1):
+        _t0 = time.time()
+        train_loss, _ = train_one_epoch(model384, train_loader384, opt384,
+                                        scaler384, crit384, ema384, FT_ACCUM)
+        ema_active = ema384 is not None and ema384.updates >= getattr(cfg, 'EMA_WARMUP_STEPS', 300)
+        if ema_active:
+            ema384.apply_to(model384)
+        val_m, *_ = validate(model384, val_loader384, crit384, tta_ms=False)
+        cur_score = val_m.get('pooled_iou', val_m.get('mean_iou', 0.0))
+        if not np.isfinite(cur_score) or cur_score <= 0.0:
+            print(f'FT384 {epoch}/{FT_EPOCHS} -> score {cur_score} (non-finite or zero) -- not saved')
+            cur_score = -1.0
+        print(f'FT384 {epoch}/{FT_EPOCHS} ({time.time()-_t0:.0f}s)  '
+              f'train_loss={train_loss.get("total",0):.4f}  '
+              f'val_pooled_iou={cur_score:.4f}  val_det_acc={val_m.get("accuracy",0):.4f}')
+        if cur_score > best384_score:
+            best384_score, patience384 = cur_score, 0
+            torch.save({'epoch': epoch, 'model_state': model384.state_dict(),
+                        'metrics': val_m, 'img_size': int(FT_SIZE)}, best384_path)
+            print('  -> new best 384 saved')
+        else:
+            patience384 += 1
+            print(f'  no improvement ({patience384}/{FT_PAT})')
+        if ema_active:
+            ema384.restore(model384)
+        sched384.step()
+        torch.save({'epoch': epoch, 'model_state': model384.state_dict(),
+                    'img_size': int(FT_SIZE),
+                    'optim_state': opt384.state_dict(),
+                    'sched_state': sched384.state_dict(),
+                    'scaler_state': scaler384.state_dict(),
+                    'ema_shadow': (ema384.shadow if ema384 is not None else None),
+                    'ema_updates': (ema384.updates if ema384 is not None else 0),
+                    'best_score': best384_score, 'patience': patience384}, last384_path)
+        if patience384 >= FT_PAT:
+            print('Early stopping (384 fine-tune).')
+            break
+
+    # hand the fine-tuned model to the evaluation cells (Cells 8-11)
+    if best384_path.exists():
+        _b4 = torch.load(best384_path, map_location=DEVICE, weights_only=False)
+        model384.load_state_dict(_b4['model_state'])
+        model = model384
+        cfg.IMG_SIZE = FT_SIZE  # Cell 8 builds the test loader at this size
+        print(f'384 fine-tune done (best pooled IoU {best384_score:.4f}). '
+              f'Evaluation cells will use the 384 model.')
+    else:
+        print('384 fine-tune produced no best checkpoint; evaluation stays on the 256 model.')
 """)
 
 code("""# ------------------------------------------------------------------------------
