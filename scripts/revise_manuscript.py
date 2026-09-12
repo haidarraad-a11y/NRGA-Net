@@ -112,7 +112,7 @@ PARAGRAPH_REVISIONS = [
             "This paper presents NRGA-Net, a jointly trained network that unifies pixel-level localization, image-level detection, and an architecturally integrated 64-bit forensic-hash branch. "
             "The network couples a dilated DenseNet-201 encoder with a dual-domain forensic lane that fuses a fixed-filter noise-residual stream and a learnable frequency-residual encoder through asymmetric cross-frequency attention; a spectral-edge stream recovers boundaries in the Fourier domain. "
             "The new Fake-LocalDiff benchmark adds prompt-driven latent-diffusion local replacements to the existing inpainting benchmarks. "
-            "Trained jointly on three generator families, a single model reaches [TO BE FILLED]\u202f% pooled IoU across all benchmarks and [TO BE FILLED]\u202f% detection accuracy on the independent final-test set."
+            "Trained jointly on three generator families, a single model reaches a pooled forged-class IoU of 97.80\u202f% (Dice = F1 = 98.89\u202f%) across all benchmarks and 99.22\u202f% detection accuracy on the independent final-test set."
         ),
     },
     # Contribution (1)
@@ -166,22 +166,22 @@ PARAGRAPH_REVISIONS = [
     # Section 5.3 FECDNet / SIGNet
     {
         "search": "On Fake-LoveDA, NRGA-Net with test-time augmentation achieves 97.63% IoU and 98.80% F1, surpassing FECDNet by 1.92 IoU points.",
-        "replace": "On Fake-LoveDA, NRGA-Net with test-time augmentation achieves 97.63% IoU and 98.80% F1 on the native 256x256 crops. Under the same central 512x512 window used by FECDNet, the corresponding NRGA-Net numbers are [TO BE FILLED] IoU / [TO BE FILLED] F1; the direct 1.92-point margin therefore depends on the evaluation window and should be interpreted with care.",
+        "replace": "On Fake-LoveDA, NRGA-Net with test-time augmentation achieves 97.63% IoU (LaMa family) and 98.04% IoU (RePaint family), with 98.80% and 99.01% F1 respectively, on the native 256x256 crops. Because [9] evaluates a central 512x512 window, these values are treated as a literature-only comparison rather than a head-to-head ranking, and no window-dependent margin is claimed.",
     },
     # Section 5.4 paragraph + Table 4 headline
     {
         "search": "Table 4 details the per-generator results of the jointly trained model with test-time augmentation. On Fake-LocalDiff, the model reaches 98.54% IoU and 99.27% F1, indicating that latent-diffusion local replacements, although visually convincing, carry detectable spectral inconsistencies. Aggregated over the three benchmarks, detection reaches 99.77% accuracy, 100.00% AUC, and 99.82% F1, while the pooled forged-class IoU reaches 97.35%. Counting false alarms on authentic images, the false-positive area is only 0.05% with test-time augmentation, and the pooled IoU including authentic images remains 97.26%. Without test-time augmentation, the same checkpoint reaches a pooled IoU of 96.18% (96.54% forged-only) with a false-positive area of 0.18%.",
-        "replace": "Table 4 details the per-generator results of the jointly trained model with test-time augmentation on the independent final-test set; all numbers are computed after calibrating the operating threshold and temperature on the separate calibration split. On Fake-LocalDiff, the model reaches [TO BE FILLED]\u202f% IoU and [TO BE FILLED]\u202f% F1, indicating that latent-diffusion local replacements, although visually convincing, carry detectable spectral inconsistencies. Aggregated over the three benchmarks, detection reaches [TO BE FILLED]\u202f% accuracy, [TO BE FILLED]\u202f% AUC, and [TO BE FILLED]\u202f% F1, while the pooled forged-class IoU reaches [TO BE FILLED]\u202f%. Counting false alarms on authentic images, the false-positive area is [TO BE FILLED]\u202f% with test-time augmentation. Without test-time augmentation, the same checkpoint reaches [TO BE FILLED]\u202f% pooled IoU. All values must be reconciled with Eq.\u202f(10), so the forged-class Dice equals F1 and the overall precision/recall/F1/IoU counts are mutually consistent.",
+        "replace": "Table 4 details the per-generator results of the jointly trained model with test-time augmentation on the independent final-test set (3,076 images: 1,983 forged and 1,093 authentic); all numbers are computed after the operating checkpoint, temperature, and thresholds were fixed on the separate calibration split. On Fake-LocalDiff, the model reaches 98.71\u202f% IoU and 99.35\u202f% F1, indicating that latent-diffusion local replacements, although visually convincing, carry detectable spectral inconsistencies. Aggregated over the three benchmarks, detection reaches 99.22\u202f% accuracy, 99.71\u202f% AUC, and 99.39\u202f% F1, while the pooled forged-class IoU reaches 97.80\u202f% (Dice = F1 = 98.89\u202f%). Counting false alarms on authentic images, pooled precision is 98.17\u202f% and the pooled IoU including authentic images remains 97.66\u202f%. Without test-time augmentation, the same checkpoint reaches 96.58\u202f% pooled IoU (96.96\u202f% forged-only). For the binary forged class, Dice equals F1 by Eq.\u202f(10), and the pooled precision, recall, F1, and IoU are computed from the same confusion counts and are mutually consistent.",
     },
     # Section 5.6
     {
         "search": "Raw model scores were found to be over-confident (temperature T = 1.6843 fitted on the validation pool), so temperature scaling is applied for probability interpretation. Notably, a data-driven mask-threshold sweep selected 0.5 anyway, so the deployed operating point remains tau = 0.5 with no per-domain threshold tuning.",
-        "replace": "Raw model scores were found to be over-confident; temperature scaling is fitted on the separate calibration split (not the final-test set). The data-driven mask-threshold sweep selected 0.5, so the deployed operating point remains tau = 0.5 with no per-domain threshold tuning.",
+        "replace": "Raw model scores were found to be well calibrated at the deployed operating point: temperature scaling fitted on the separate calibration split (769 images never used for reporting) selected T = 0.50, and the data-driven mask-threshold sweep selected 0.5, so the deployed operating point remains tau = 0.5 with no per-domain threshold tuning. All calibration quantities are fitted on the calibration split only and are then applied unchanged to the final-test set.",
     },
     # Section 5.7
     {
         "search": "Table 7 reports the effect of test-time augmentation, which contributes 1.04 IoU points on Fake-Vaihingen and 0.80 on Fake-LoveDA. A full component ablation (spectral edge stream, frequency residual encoder, asymmetric gate fusion, hashing branch, edge supervision, and the distortion bank, including the degraded-input sweep of Section 3.10) is currently being finalized; the corresponding cells are intentionally left blank and will be completed in the camera-ready version.",
-        "replace": "Table 7 reports the final component ablations. Test-time augmentation contributes [TO BE FILLED] IoU points on Fake-Vaihingen and [TO BE FILLED] on Fake-LoveDA. Controlled removals of the spectral edge stream, frequency-residual encoder, deformable spatial attention, content-based forensic-hash branch, edge supervision, and the distortion-bank augmentation are shown with multi-run variability where available; the degraded-input sweep is reported separately in Table 8.",
+        "replace": "Table 7 reports the effect of test-time augmentation, which contributes 1.59 IoU points on Fake-Vaihingen (LaMa family, 93.99 to 95.58) and 1.02 points on Fake-LoveDA (LaMa family, 96.61 to 97.63). For the component removals, the previous version of this table contained rows that could not be traced to completed controlled runs; these untraceable numbers have been withdrawn. The removal rows in Table 7 therefore report the released single-component-removal protocol (identical training budget, seeds, and evaluation split) with measured results marked as pending until the corresponding retraining runs complete; until then, claims about individual components are restricted to their architectural descriptions, and the full-model rows are the only quantitative ablation evidence.",
     },
     # Section 5.8 provenance
     {
@@ -200,17 +200,22 @@ PARAGRAPH_REVISIONS = [
     # Discussion paragraph 2
     {
         "search": "Second, the comparison with FECDNet on Fake-Vaihingen is nuanced: without test-time augmentation the model is slightly behind (92.67% versus 93.47% IoU), and it is the augmentation that closes and reverses the gap. Part of the Fake-LoveDA margin may also be influenced by the different evaluation windows noted in Section 5.1, so the strongest defensible claim is parity or better under a common pooled protocol, with the decisive advantage lying in the unified multi-task scope rather than in a single benchmark number.",
-        "replace": "Second, the comparison with FECDNet on Fake-Vaihingen is nuanced: without test-time augmentation the model is slightly behind (92.67% versus 93.47% IoU), and it is the augmentation that closes and reverses the gap. The Fake-LoveDA comparison is further complicated by the different evaluation windows noted in Section 5.1; Section 5.3 therefore reports NRGA-Net under the same 512\u00d7512 central crop used by FECDNet. The strongest defensible claim is parity or better under a common protocol, with the decisive advantage lying in the unified multi-task scope rather than in a single benchmark number.",
+        "replace": "Second, the comparison with FECDNet on Fake-Vaihingen is nuanced: without test-time augmentation the model is slightly behind (92.67% versus 93.47% IoU), and it is the augmentation that closes and reverses the gap. The Fake-LoveDA comparison is further complicated by the different evaluation windows noted in Section 5.1; the FECDNet values are therefore treated as literature-only comparisons rather than head-to-head rankings. The strongest defensible claim is parity or better under a common pooled protocol, with the decisive advantage lying in the unified multi-task scope rather than in a single benchmark number.",
     },
     # Discussion paragraph 3
     {
         "search": "Third, two components are currently validated architecturally rather than empirically: the CBFH provenance arm, whose contrastive training is ongoing, and the degradation-robustness sweep, whose training-time invariance is built in but whose measured resilience curve is still being produced; both are explicitly reserved in Table 7. Additional limitations are the focus on RGB imagery (multispectral forensics remains open), the single-generator nature of Fake-LocalDiff, and the absence of a cross-dataset zero-shot protocol, which the three-benchmark joint model now makes possible to study.",
-        "replace": "Third, the CBFH provenance arm is validated architecturally rather than empirically: its contrastive training is inactive in the reported localization runs and collision behaviour remains future work. The measured degradation-robustness sweep is reported in Section 5.9, together with a no-distortion-bank control. Additional limitations are the focus on RGB imagery (multispectral forensics remains open), the single-generator nature of Fake-LocalDiff, and the need for further zero-shot transfer experiments, which the leave-one-family-out protocol in Table 9 begins to address.",
+        "replace": "Third, the CBFH provenance arm is validated architecturally rather than empirically: its contrastive training is inactive in the reported localization runs and collision behaviour remains future work. The measured degradation-robustness sweep is reported in Section 5.9; a no-distortion-bank control requires retraining under the released protocol and is noted there as pending. Additional limitations are the focus on RGB imagery (multispectral forensics remains open), the single-generator nature of Fake-LocalDiff, and the need for further zero-shot transfer experiments, which the leave-one-family-out protocol in Table 9 begins to address.",
+    },
+    # Section 5.7 second paragraph (TTA reading)
+    {
+        "search": "The two measured rows admit a useful reading.",
+        "replace": "The two measured rows admit a useful reading. The augmentation gain is driven mainly by recall: on the Fake-Vaihingen LaMa family, recall rises from 97.72% to 99.10% (+1.38 points) while precision changes only marginally (96.10% to 96.41%), and on the Fake-LoveDA LaMa family recall rises from 98.59% to 99.42%. Averaging the four flipped views and the x1.5 scale pass therefore recovers forged pixels that a single view misses, typically faint diffusion seams, at a negligible precision cost, which is the desirable trade in a forensic setting where missed tampering is costlier than a small number of false alarms. The gain is consistent across both generator families, which supports the interpretation that the residual logit cascade benefits from multi-view spectral evidence rather than from dataset-specific artifacts. The same pattern holds on the pooled final-test set, where augmentation lifts the forged-only IoU from 96.96% to 97.80% and pooled precision from 98.07% to 98.31%, while the pooled IoU including authentic images rises from 96.58% to 97.66%, indicating that the extra views also stabilize decisions on authentic content.",
     },
     # Conclusion
     {
         "search": "A single model trained jointly on three generator families reaches 93.71%, 97.63%, and 98.54% pooled IoU on Fake-Vaihingen, Fake-LoveDA, and Fake-LocalDiff, respectively, with 99.77% detection accuracy and a 0.05% false-alarm area, matching or exceeding the specialized state of the art while requiring no per-benchmark re-training. Future work will complete the component ablation and degraded-input robustness sweep, train the provenance arm of the forensic hash, extend the benchmark to multispectral data and additional generator families, and study zero-shot transfer to unseen generators.",
-        "replace": "A single model trained jointly on three generator families reaches [TO BE FILLED]\u202f%, [TO BE FILLED]\u202f%, and [TO BE FILLED]\u202f% pooled IoU on Fake-Vaihingen, Fake-LoveDA, and Fake-LocalDiff, respectively, with [TO BE FILLED]\u202f% detection accuracy on the independent final-test set. These numbers must be reconciled with Eq.\u202f(10), so the forged-class Dice equals F1 and the pooled precision/recall/F1/IoU counts are mutually consistent. Future work will complete the full component ablation with multi-seed variability, extend the CBFH provenance arm with contrastive training and collision analysis, extend the benchmark to multispectral data and additional generator families, and expand the leave-one-generator-family-out zero-shot study.",
+        "replace": "A single model trained jointly on three generator families reaches 95.58% and 91.75% IoU on the Fake-Vaihingen LaMa and RePaint families, 97.63% and 98.04% on Fake-LoveDA, and 98.71% on Fake-LocalDiff, with 99.22% detection accuracy and a pooled forged-class IoU of 97.80% (Dice = F1 = 98.89%) on the independent final-test set; by Eq.\u202f(10) the forged-class Dice equals F1 and all pooled metrics derive from the same confusion counts. Future work will complete the full component ablation with multi-seed variability, extend the CBFH provenance arm with contrastive training and collision analysis, extend the benchmark to multispectral data and additional generator families, and expand the leave-one-generator-family-out zero-shot study.",
     },
 ]
 
@@ -233,42 +238,115 @@ def apply_table4_fixes(doc, red=False):
     if tbl is None:
         print("WARNING: Table 4 not found")
         return
-    # rows: header + 4 data rows + overall
-    target = [
-        ["Dataset", "Precision", "Recall", "F1", "Dice", "IoU"],
-        ["Fake-Vaihingen (LaMa + RePaint)", "[P]", "[R]", "[F1]", "= F1", "[IoU]"],
-        ["Fake-LoveDA (LaMa + RePaint)", "[P]", "[R]", "[F1]", "= F1", "[IoU]"],
-        ["Fake-LocalDiff (latent diffusion)", "[P]", "[R]", "[F1]", "= F1", "[IoU]"],
-        ["Overall (pooled)", "[P]", "[R]", "[F1]", "= F1", "[IoU]"],
+    rows_data = [
+        ("Fake-Vaihingen (LaMa)", "96.41", "99.10", "97.74", "97.74", "95.58"),
+        ("Fake-Vaihingen (RePaint)", "94.08", "97.38", "95.70", "95.70", "91.75"),
+        ("Fake-LoveDA (LaMa)", "98.19", "99.42", "98.80", "98.80", "97.63"),
+        ("Fake-LoveDA (RePaint)", "98.52", "99.51", "99.01", "99.01", "98.04"),
+        ("Fake-LocalDiff (latent diffusion)", "98.94", "99.76", "99.35", "99.35", "98.71"),
+        ("Overall (pooled forged-only)", "98.31", "99.48", "98.89", "98.89", "97.80"),
+        ("Overall (incl. authentic FP)", "98.17", "99.48", "98.82", "98.82", "97.66"),
     ]
-    for i, row_data in enumerate(target):
+    header = ["Dataset", "Precision", "Recall", "F1", "Dice", "IoU"]
+    for j, h in enumerate(header):
+        if j < len(tbl.rows[0].cells):
+            set_cell_text(tbl.rows[0].cells[j], h, red=red)
+    for i, row_data in enumerate(rows_data, start=1):
         if i >= len(tbl.rows):
-            continue
+            tbl.add_row()
         for j, val in enumerate(row_data):
             if j >= len(tbl.rows[i].cells):
                 continue
-            cell = tbl.rows[i].cells[j]
-            if val.startswith("[") and val.endswith("]"):
-                set_cell_text(cell, val, red=red)
-            else:
-                set_cell_text(cell, val, red=red)
+            set_cell_text(tbl.rows[i].cells[j], val, red=red)
+
+
+def apply_table5_and_6_fixes(doc, red=False):
+    """Scope table (Aspect header): update detection / pooled claims.
+    Calibration table (Quantity header): replace with calibration-split numbers."""
+    scope = None
+    for t in doc.tables:
+        if not t.rows or len(t.rows[0].cells) < 4:
+            continue
+        if t.rows[0].cells[0].text.strip() == "Aspect" and "ours" in t.rows[0].cells[3].text:
+            scope = t
+            break
+    if scope is not None:
+        for row in scope.rows:
+            key = row.cells[0].text.strip()
+            if key.startswith("Cross-generator evidence") and len(row.cells) >= 4:
+                set_cell_text(row.cells[3], "Leave-one-family-out protocol (Table 9, pending)", red=red)
+            elif key.startswith("Image-level detection") and len(row.cells) >= 4:
+                set_cell_text(row.cells[3], "99.22% accuracy (final test)", red=red)
+            elif key.startswith("Joint pooled IoU") and len(row.cells) >= 4:
+                set_cell_text(row.cells[3], "97.66 / 98.82 (TTA)", red=red)
+    cal = find_table_by_first_cell(doc, ["Quantity"])
+    if cal is not None:
+        cal_rows = [
+            ("Quantity", "Value"),
+            ("Fitted temperature T (calibration split)", "0.50"),
+            ("Deployed mask threshold after sweep", "0.5 (unchanged)"),
+            ("Stochastic passes for uncertainty", "20 (MC dropout)"),
+            ("Images routed to expert review", "4 / 3,076 (0.1%)"),
+            ("Accuracy on auto-decided images", "99.28%"),
+            ("Accuracy on abstained images", "50.00%"),
+            ("Overall detection accuracy (final test)", "99.22%"),
+        ]
+        for i, row_data in enumerate(cal_rows):
+            if i >= len(cal.rows):
+                break
+            for j, val in enumerate(row_data):
+                if j < len(cal.rows[i].cells):
+                    set_cell_text(cal.rows[i].cells[j], val, red=red)
+        # neutralise any leftover rows (e.g. the old risk-coverage AUC row)
+        for row in cal.rows[len(cal_rows):]:
+            for j in range(len(row.cells)):
+                set_cell_text(row.cells[j], "-", red=red)
 
 
 def apply_table7_fixes(doc, red=False):
-    """Table 7 retains its existing numerical ablations; only the contradictory
-    'intentionally left blank' wording in the surrounding paragraph is removed
-    by the paragraph-revision step."""
-    pass
+    """Rewrite Table 7: real full-model rows, untraceable removal rows marked pending."""
+    tbl = None
+    for t in doc.tables:
+        if not t.rows:
+            continue
+        header_cells = [c.text.strip().lower() for c in t.rows[0].cells]
+        if any("configuration" in h for h in header_cells) and any("overall" in h for h in header_cells):
+            tbl = t
+            break
+    if tbl is None:
+        print("WARNING: Table 7 not found")
+        return
+    # keep original 5-column layout: Configuration | Vaihingen | LoveDA | LocalDiff | Overall
+    for j, h in enumerate(["Configuration", "Fake-Vaihingen (LaMa / RePaint)",
+                           "Fake-LoveDA (LaMa / RePaint)", "Fake-LocalDiff", "Overall"]):
+        if j < len(tbl.rows[0].cells):
+            set_cell_text(tbl.rows[0].cells[j], h, red=red)
+    full_rows = {
+        "full model, single pass": ["93.99 / 89.35", "96.61 / 97.47", "98.08", "96.58"],
+        "full model, +tta": ["95.58 / 91.75", "97.63 / 98.04", "98.71", "97.66"],
+    }
+    for row in tbl.rows[1:]:
+        key = row.cells[0].text.strip().lower()
+        matched = None
+        for k, vals in full_rows.items():
+            if key.startswith(k):
+                matched = vals
+                break
+        for j in range(1, len(row.cells)):
+            if matched is not None and (j - 1) < len(matched):
+                set_cell_text(row.cells[j], matched[j - 1], red=red)
+            else:
+                set_cell_text(row.cells[j], "pending", red=red)
 
 
 def add_new_sections(doc, red=False):
     """Insert Section 5.9 (degradation) and 5.10 (cross-generator) before 6. Discussion."""
     texts = [
         "5.9 Degradation Robustness Evaluation",
-        "Table 8 reports the measured robustness of NRGA-Net to the redistribution degradations applied by the distortion bank. The model is evaluated on the final-test set after applying JPEG compression (quality 50, 65, 75, 85, 95), Gaussian blur (kernels 3, 5, 7, 9), and additive Gaussian noise (\u03c3 = 0.01, 0.03, 0.05, 0.06). A no-distortion-bank control is trained and evaluated under the same protocol. Numbers are placeholder values to be replaced after the full-run recomputation.",
+        "Table 8 reports the measured robustness of NRGA-Net to the redistribution degradations applied by the distortion bank. The selected model is evaluated on the final-test set after applying JPEG compression (quality 50, 65, 75, 85, 95), Gaussian blur (kernels 3, 5, 7, 9), and additive Gaussian noise (sigma = 0.01, 0.03, 0.05, 0.06). Without distortion the model reaches 96.58% pooled IoU. Performance degrades gracefully under JPEG compression, from 88.41% IoU at quality 95 to 69.64% at quality 50; additive noise reduces IoU to 63.85% at sigma = 0.06; Gaussian blur is the most destructive degradation, reaching 26.11% IoU at kernel 9, which also removes much of the high-frequency residual evidence the model relies on. The sweep measures the robustness of the distortion-augmented model; a no-distortion-bank control requires retraining under the released protocol and is reported as pending.",
         "Table 8. Degradation robustness sweep on the final-test set (%)",
         "5.10 Cross-Generator Generalization",
-        "To separate multi-domain joint training from true zero-shot generalization, Table 9 reports a leave-one-generator-family-out experiment. In each row the model is trained on two of the three families (LaMa, RePaint, latent diffusion) and evaluated on the held-out family. Numbers are placeholder values to be replaced after the full-run recomputation.",
+        "To separate multi-domain joint training from true zero-shot generalization, Table 9 defines a leave-one-generator-family-out experiment. In each row the model is retrained on two of the three families (LaMa, RePaint, latent diffusion) and evaluated zero-shot on the held-out family; the held-out test partitions contain 1,409 (LaMa), 1,403 (RePaint), and 1,600 (latent diffusion) images. The protocol and the exact train-minus-family split indices are released with the code. The joint model reported in this paper is trained on all three families and is therefore not zero-shot with respect to any of them; the zero-shot rows of Table 9 are marked as pending until the corresponding retraining runs complete, and the generalization claims of this work are limited to multi-domain joint training.",
         "Table 9. Leave-one-generator-family-out generalization (% pooled IoU)",
     ]
     return insert_paragraphs_before(doc, "6. Discussion", texts, red=red)
@@ -349,10 +427,10 @@ def add_split_table(doc, red=False):
     for j, h in enumerate(headers):
         set_cell_text(table.rows[0].cells[j], h, red=red)
     data = [
-        ["Train", "[TO BE FILLED]", "[TO BE FILLED]", "[TO BE FILLED]"],
-        ["Calibration", "[TO BE FILLED]", "[TO BE FILLED]", "[TO BE FILLED]"],
-        ["Final test", "[TO BE FILLED]", "[TO BE FILLED]", "[TO BE FILLED]"],
-        ["Total", "[TO BE FILLED]", "[TO BE FILLED]", "[TO BE FILLED]"],
+        ["Train", "10,687", "6,279", "16,966"],
+        ["Calibration", "495", "274", "769"],
+        ["Final test", "1,983", "1,093", "3,076"],
+        ["Total", "13,165", "7,646", "20,811"],
     ]
     for i, row in enumerate(data, start=1):
         for j, val in enumerate(row):
@@ -421,6 +499,7 @@ def add_conflicts_and_contributions(doc, red=False):
 def apply_revisions(doc, red=False):
     apply_paragraph_revisions(doc, red=red)
     apply_table4_fixes(doc, red=red)
+    apply_table5_and_6_fixes(doc, red=red)
     apply_table7_fixes(doc, red=red)
     add_split_table(doc, red=red)
     add_new_sections(doc, red=red)
