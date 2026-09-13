@@ -349,7 +349,52 @@ def add_new_sections(doc, red=False):
         "To separate multi-domain joint training from true zero-shot generalization, Table 9 defines a leave-one-generator-family-out experiment. In each row the model is retrained on two of the three families (LaMa, RePaint, latent diffusion) and evaluated zero-shot on the held-out family; the held-out test partitions contain 1,409 (LaMa), 1,403 (RePaint), and 1,600 (latent diffusion) images. The protocol and the exact train-minus-family split indices are released with the code. The joint model reported in this paper is trained on all three families and is therefore not zero-shot with respect to any of them; the zero-shot rows of Table 9 are marked as pending until the corresponding retraining runs complete, and the generalization claims of this work are limited to multi-domain joint training.",
         "Table 9. Leave-one-generator-family-out generalization (% pooled IoU)",
     ]
-    return insert_paragraphs_before(doc, "6. Discussion", texts, red=red)
+    result = insert_paragraphs_before(doc, "6. Discussion", texts, red=red)
+
+    def insert_table_after_caption(caption_prefix, data):
+        caption = None
+        for p in doc.paragraphs:
+            if p.text.strip().startswith(caption_prefix):
+                caption = p
+                break
+        if caption is None:
+            print(f"WARNING: caption '{caption_prefix}' not found")
+            return
+        table = doc.add_table(rows=len(data), cols=len(data[0]))
+        table.style = "Table Grid"
+        for i, row in enumerate(data):
+            for j, val in enumerate(row):
+                set_cell_text(table.rows[i].cells[j], str(val), red=red)
+        caption._element.addnext(table._element)
+
+    table8_data = [
+        ["Condition", "IoU", "F1", "DetAcc"],
+        ["none", "96.58", "98.26", "99.22"],
+        ["jpeg 50", "69.64", "82.10", "90.02"],
+        ["jpeg 65", "75.78", "86.22", "92.75"],
+        ["jpeg 75", "79.77", "88.75", "94.64"],
+        ["jpeg 85", "83.99", "91.30", "96.39"],
+        ["jpeg 95", "88.41", "93.85", "97.56"],
+        ["blur 3", "89.64", "94.54", "97.07"],
+        ["blur 5", "68.19", "81.09", "88.85"],
+        ["blur 7", "32.47", "49.02", "72.53"],
+        ["blur 9", "26.11", "41.41", "68.73"],
+        ["noise 0.01", "90.81", "95.18", "97.85"],
+        ["noise 0.03", "80.26", "89.05", "94.44"],
+        ["noise 0.05", "68.90", "81.58", "91.81"],
+        ["noise 0.06", "63.85", "77.94", "89.47"],
+    ]
+    insert_table_after_caption("Table 8.", table8_data)
+
+    table9_data = [
+        ["Held-out family", "Train families", "Test samples", "IoU (zero-shot)", "F1 (zero-shot)"],
+        ["lama", "repaint + latent_diffusion", "1,409", "pending", "pending"],
+        ["repaint", "lama + latent_diffusion", "1,403", "pending", "pending"],
+        ["latent_diffusion", "lama + repaint", "1,600", "pending", "pending"],
+    ]
+    insert_table_after_caption("Table 9.", table9_data)
+
+    return result
 
 
 def add_related_work_signet(doc, red=False):
