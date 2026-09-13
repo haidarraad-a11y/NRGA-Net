@@ -320,6 +320,10 @@ class Config:
     SES_ENABLE = True # spectral edge streams in the decoder
     SES_HP_RADIUS = 0.25 # fraction of the Nyquist radius zeroed (low-freq disk)
     SES_CH = 32 # edge-stream width per scale
+    # ---- component-removal switches (Table 7 ablations) ----
+    FRE_ENABLE = True # frequency residual encoder (FFT branch) + gate fusion
+    FDA_DEFORM_ENABLE = True # deformable spatial attention inside FDA (low slot)
+    CBFH_ENABLE = True # content-based forensic hash branch (hash outputs zeroed if False)
     POINT_ENABLE = False # point head off for the hybrid-only ablation
     # ---- split learning rates (the main fix) ----
     LR_ENCODER = 5e-5 # pretrained DenseNet-201 backbone
@@ -1590,7 +1594,7 @@ class ForensicGateFusion(nn.Module):
           low-freq (n): Channel-Attention + Deformable Spatial-Attention -> molds
               to irregular non-rigid boundaries (recovers missed diffusion areas).
     Output channels == input channels, so the decoder gate interface is unchanged."""
-    def __init__(self, ch):
+    def __init__(self, ch, cfg=None):
         super().__init__()
         # Cross-Frequency Interaction
         self.conv_l2h = nn.Conv2d(ch, ch, 1, bias=False) # low(noise) -> high(freq)
@@ -1600,7 +1604,8 @@ class ForensicGateFusion(nn.Module):
         # Frequency-specific Dual-Attention
         self.ca_high = ChannelAttention(ch) # high-freq: CA only
         self.ca_low = ChannelAttention(ch) # low-freq: CA ...
-        self.dsa_low = DeformableSpatialAttention(ch) # ... + Deformable SA
+        _deform = True if cfg is None else bool(getattr(cfg, 'FDA_DEFORM_ENABLE', True))
+        self.dsa_low = DeformableSpatialAttention(ch) if _deform else nn.Identity() # ... + Deformable SA
         # Channel-preserving fuse: 1x1 cross-domain mix + depthwise 3x3 refine
         self.fuse = nn.Sequential(
             nn.Conv2d(ch * 2, ch, 1, bias=False), nn.BatchNorm2d(ch), nn.ReLU(True),
@@ -1672,12 +1677,16 @@ class NRGANet(nn.Module):
 
         # Noise encoder (novel) - spatial high-pass forensic features
         self.noise_encoder = NoiseResidualEncoder(extra_ch=_extra)
-        # Frequency encoder (novel) - spectral (FFT) forensic features
-        self.freq_encoder = FrequencyResidualEncoder()
-        # Forensic gate fusion: combine spatial-noise + frequency cues per scale
-        self.fuse1 = ForensicGateFusion(32)
-        self.fuse2 = ForensicGateFusion(64)
-        self.fuse3 = ForensicGateFusion(128)
+        # Frequency encoder (novel) - spectral (FFT) forensic features.
+        # FRE_ENABLE=False removes the branch AND the gate fusion (Table 7 ablation):
+        # the decoder gate stream then carries the spatial-noise evidence only.
+        self.freq_enable = bool(getattr(cfg, 'FRE_ENABLE', True))
+        if self.freq_enable:
+            self.freq_encoder = FrequencyResidualEncoder()
+            # Forensic gate fusion: combine spatial-noise + frequency cues per scale
+            self.fuse1 = ForensicGateFusion(32, cfg)
+            self.fuse2 = ForensicGateFusion(64, cfg)
+            self.fuse3 = ForensicGateFusion(128, cfg)
 
         # Classification path (SFA + FAM removed -> classify directly from fused backbone feature)
         self.cls_head = nn.Sequential(nn.LayerNorm(cfg.BACKBONE_DIM), nn.Linear(cfg.BACKBONE_DIM, 256), nn.ReLU(True), nn.Dropout(0.3), nn.Linear(256, 1))
@@ -1687,9 +1696,13 @@ class NRGANet(nn.Module):
         # global feature looks real (was: masks zeroed by cls-gated IoU metric).
         self.mask_cls = nn.Linear(1, 1)
 
-        # Provenance verification path (CBFH) - replaces SFA + FAM
-        self.cbfh = ContentBasedForensicHashing(in_ch=cfg.BACKBONE_DIM, embed_dim=cfg.CBFH_EMBED_DIM,
-                                                hash_bits=cfg.CBFH_HASH_BITS, alpha=cfg.CBFH_ALPHA)
+        # Provenance verification path (CBFH) - replaces SFA + FAM.
+        # CBFH_ENABLE=False removes the branch entirely (Table 7 ablation);
+        # forward() then returns zero hash tensors (the provenance loss is
+        # already inactive: LAMBDA_PROV = 0).
+        self.cbfh = (ContentBasedForensicHashing(in_ch=cfg.BACKBONE_DIM, embed_dim=cfg.CBFH_EMBED_DIM,
+                                                 hash_bits=cfg.CBFH_HASH_BITS, alpha=cfg.CBFH_ALPHA)
+                     if getattr(cfg, 'CBFH_ENABLE', True) else None)
 
         # Segmentation decoder (novel NRGA)
         self.decoder = NRGADecoder(ctx_ch=cfg.BACKBONE_DIM, img_size=cfg.IMG_SIZE,
@@ -1741,13 +1754,16 @@ class NRGANet(nn.Module):
         # Noise features (spatial) + Frequency features (spectral)
         # also returns the raw residual and the 1/2-res scale
         residual, n0, n1, n2, n3 = self.noise_encoder(x_raw, prior_res)
-        f1, f2, f3, l1, l2, l3 = self.freq_encoder(x_raw)
-        # SF-CFNet dual-frequency FDA fusion: the LOW-freq stream (l) -> the
-        # Deformable spatial-attention 'low' slot localises diffusion's non-rigid
-        # forged regions; HIGH-freq spectral (f) + SRM noise residual (n) -> the
-        # CA-only 'high' slot captures GAN checkerboard / inpainting edges. This
-        # supplies the low-frequency evidence diffusion needs (was missing).
-        g1 = self.fuse1(l1, n1 + f1); g2 = self.fuse2(l2, n2 + f2); g3 = self.fuse3(l3, n3 + f3)
+        if self.freq_enable:
+            f1, f2, f3, l1, l2, l3 = self.freq_encoder(x_raw)
+            # SF-CFNet dual-frequency FDA fusion: the LOW-freq stream (l) -> the
+            # Deformable spatial-attention 'low' slot localises diffusion's non-rigid
+            # forged regions; HIGH-freq spectral (f) + SRM noise residual (n) -> the
+            # CA-only 'high' slot captures GAN checkerboard / inpainting edges. This
+            # supplies the low-frequency evidence diffusion needs (was missing).
+            g1 = self.fuse1(l1, n1 + f1); g2 = self.fuse2(l2, n2 + f2); g3 = self.fuse3(l3, n3 + f3)
+        else:
+            g1, g2, g3 = n1, n2, n3
 
         # dilated pyramid context replaces the ViT cross-attention bridge
         ctx = self.fpm(c4) # (B, 512, h, w)
@@ -1780,7 +1796,11 @@ class NRGANet(nn.Module):
         cls_logit = self.cls_head(backbone_feat).squeeze(-1) + self.mask_cls(mask_gmp).squeeze(-1)
 
         # Provenance hashing (CBFH): pooled from c4 guided by deepest decoder mask
-        h_soft, h_bin = self.cbfh(c4, aux_masks[0])
+        if self.cbfh is not None:
+            h_soft, h_bin = self.cbfh(c4, aux_masks[0])
+        else:
+            h_soft = torch.zeros(c4.shape[0], cfg.CBFH_HASH_BITS, device=c4.device, dtype=c4.dtype)
+            h_bin = torch.zeros_like(h_soft)
 
         return _to_fp32((cls_logit, main_mask, aux_masks, h_soft, h_bin,
                          point_logits, point_coords, edge_logits))
@@ -1839,7 +1859,10 @@ with torch.no_grad():
     assert _m.shape[-2:] == (384, 384), _m.shape
     print(f'Resolution-agnostic OK: 384x384 -> mask {tuple(_m.shape)}')
     del _alt, _c, _m, _c0, _c1, _c2, _c3, _c4
-    print(f'CBFH hash : soft={tuple(h_soft.shape)}, bin={tuple(h_bin.shape)} ({h_bin.shape[1]}-bit forensic fingerprint)')
+    if getattr(model, 'cbfh', None) is not None:
+        print(f'CBFH hash : soft={tuple(h_soft.shape)}, bin={tuple(h_bin.shape)} ({h_bin.shape[1]}-bit forensic fingerprint)')
+    else:
+        print('CBFH hash : branch removed (CBFH_ENABLE=False); zero hash placeholders returned')
 
 # ======================================================================
 # 7. NRGA Loss (Focal + Dice + Boundary + DeepSupervision)
