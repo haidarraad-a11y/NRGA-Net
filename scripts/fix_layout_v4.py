@@ -213,16 +213,17 @@ def rebuild_columns(doc):
             ch.addprevious(build_boundary(prev == 'one' or prev == 'full'))
         prev = m
 
-    # body-level sectPr governs the final group
+    # body-level sectPr governs the final group (text after the last
+    # figure/table -> two columns; num="2" means two columns, absent num = one)
     last_sectpr = body.find(W + 'sectPr')
     if last_sectpr is not None:
         cols = last_sectpr.find(W + 'cols')
         if cols is None:
             cols = last_sectpr.makeelement(W + 'cols', {})
             last_sectpr.append(cols)
-        if modes and modes[-1] != 'two':
-            cols.set(W + 'num', '2')  # final group should flow in two columns anyway
-        if cols.get(W + 'num') and (not modes or modes[-1] == 'two'):
+        if modes and modes[-1] == 'two':
+            cols.set(W + 'num', '2')
+        elif cols.get(W + 'num'):
             del cols.attrib[W + 'num']
         cols.set(W + 'space', '432')
     return children, modes
