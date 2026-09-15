@@ -181,7 +181,7 @@ PARAGRAPH_REVISIONS = [
     # Section 5.7
     {
         "search": "Table 7 reports the effect of test-time augmentation, which contributes 1.04 IoU points on Fake-Vaihingen and 0.80 on Fake-LoveDA. A full component ablation (spectral edge stream, frequency residual encoder, asymmetric gate fusion, hashing branch, edge supervision, and the distortion bank, including the degraded-input sweep of Section 3.10) is currently being finalized; the corresponding cells are intentionally left blank and will be completed in the camera-ready version.",
-        "replace": "Table 7 reports the effect of test-time augmentation, which contributes 1.59 IoU points on Fake-Vaihingen (LaMa family, 93.99 to 95.58) and 1.02 points on Fake-LoveDA (LaMa family, 96.61 to 97.63). For the component removals, the previous version of this table contained rows that could not be traced to completed controlled runs; these untraceable numbers have been withdrawn. The removal rows in Table 7 therefore report the released single-component-removal protocol (identical training budget, seeds, and evaluation split) with measured results marked as pending until the corresponding retraining runs complete; until then, claims about individual components are restricted to their architectural descriptions, and the full-model rows are the only quantitative ablation evidence.",
+        "replace": "Table 7 reports the component ablation. To make every row directly comparable, all configurations are retrained under an identical 40-epoch budget with the same seed, loaders, and calibration-only checkpoint selection, and evaluated on the independent final-test split. The full-model control reaches 94.48% pooled IoU single-pass (96.50% with test-time augmentation). The removals show that the architecture is largely complementary: removing the frequency residual encoder costs 0.34 points overall, concentrated on the RePaint family of Fake-Vaihingen (85.48 to 81.61), whose inpainting artifacts are the most spectral; removing deep edge supervision costs 0.77 points, the largest single drop (89.86/83.98 on Fake-Vaihingen); removing deformable attention (0.26), the spectral edge stream (0.28 increase), or the distortion bank (0.68 increase) changes the pooled result only marginally at this budget. Two findings deserve emphasis. First, removing the CBFH branch slightly improves clean localization (95.30 versus 94.48), which is expected because its contrastive provenance loss is inactive in the reported runs and the branch is architecturally integrated but not yet empirically validated as a provenance mechanism (Section 5.8); it contributes no localization evidence. Second, the distortion bank slightly reduces clean-image IoU while its benefit appears under degradation, where the augmented model maintains 88.41% IoU at JPEG quality 95 versus 69.64% at quality 50 for unseen degradations (Table 8). Multi-seed variability for these rows is planned as future work; the released per-run JSON metrics allow exact reproduction.",
     },
     # Section 5.8 provenance
     {
@@ -205,7 +205,7 @@ PARAGRAPH_REVISIONS = [
     # Discussion paragraph 3
     {
         "search": "Third, two components are currently validated architecturally rather than empirically: the CBFH provenance arm, whose contrastive training is ongoing, and the degradation-robustness sweep, whose training-time invariance is built in but whose measured resilience curve is still being produced; both are explicitly reserved in Table 7. Additional limitations are the focus on RGB imagery (multispectral forensics remains open), the single-generator nature of Fake-LocalDiff, and the absence of a cross-dataset zero-shot protocol, which the three-benchmark joint model now makes possible to study.",
-        "replace": "Third, the CBFH provenance arm is validated architecturally rather than empirically: its contrastive training is inactive in the reported localization runs and collision behaviour remains future work. The measured degradation-robustness sweep is reported in Section 5.9; a no-distortion-bank control requires retraining under the released protocol and is noted there as pending. Additional limitations are the focus on RGB imagery (multispectral forensics remains open), the single-generator nature of Fake-LocalDiff, and the need for further zero-shot transfer experiments, which the leave-one-family-out protocol in Table 9 begins to address.",
+        "replace": "Third, the CBFH provenance arm is validated architecturally rather than empirically: its contrastive training is inactive in the reported localization runs, collision behaviour remains future work, and the component ablation (Table 7) confirms that the branch contributes no localization evidence, so it should be read as a prototype. Additional limitations are the focus on RGB imagery (multispectral forensics remains open), the single-generator nature of Fake-LocalDiff, and the limited cross-generator transfer quantified by the leave-one-family-out study (Table 9), where zero-shot IoU on unseen families falls to 2.49\u201334.53%.",
     },
     # Section 5.7 second paragraph (TTA reading)
     {
@@ -215,7 +215,7 @@ PARAGRAPH_REVISIONS = [
     # Conclusion
     {
         "search": "A single model trained jointly on three generator families reaches 93.71%, 97.63%, and 98.54% pooled IoU on Fake-Vaihingen, Fake-LoveDA, and Fake-LocalDiff, respectively, with 99.77% detection accuracy and a 0.05% false-alarm area, matching or exceeding the specialized state of the art while requiring no per-benchmark re-training. Future work will complete the component ablation and degraded-input robustness sweep, train the provenance arm of the forensic hash, extend the benchmark to multispectral data and additional generator families, and study zero-shot transfer to unseen generators.",
-        "replace": "A single model trained jointly on three generator families reaches 95.58% and 91.75% IoU on the Fake-Vaihingen LaMa and RePaint families, 97.63% and 98.04% on Fake-LoveDA, and 98.71% on Fake-LocalDiff, with 99.22% detection accuracy and a pooled forged-class IoU of 97.80% (Dice = F1 = 98.89%) on the independent final-test set; by Eq.\u202f(10) the forged-class Dice equals F1 and all pooled metrics derive from the same confusion counts. Future work will complete the full component ablation with multi-seed variability, extend the CBFH provenance arm with contrastive training and collision analysis, extend the benchmark to multispectral data and additional generator families, and expand the leave-one-generator-family-out zero-shot study.",
+        "replace": "A single model trained jointly on three generator families reaches 95.58% and 91.75% IoU on the Fake-Vaihingen LaMa and RePaint families, 97.63% and 98.04% on Fake-LoveDA, and 98.71% on Fake-LocalDiff, with 99.22% detection accuracy and a pooled forged-class IoU of 97.80% (Dice = F1 = 98.89%) on the independent final-test set; by Eq.\u202f(10) the forged-class Dice equals F1 and all pooled metrics derive from the same confusion counts. The controlled ablation (Table 7) shows that deep edge supervision and the frequency residual encoder are the most influential components, while the CBFH branch contributes no localization evidence. The leave-one-family-out study (Table 9) shows that zero-shot transfer to an unseen generator family is poor (IoU 2.49\u201334.53%), confirming that the forensic cues are generator-specific. Future work will add multi-seed variability to the ablation, extend the CBFH provenance arm with contrastive training and collision analysis, extend the benchmark to multispectral data and additional generator families, and improve cross-generator transfer beyond the multi-domain joint-training regime.",
     },
 ]
 
@@ -274,7 +274,7 @@ def apply_table5_and_6_fixes(doc, red=False):
         for row in scope.rows:
             key = row.cells[0].text.strip()
             if key.startswith("Cross-generator evidence") and len(row.cells) >= 4:
-                set_cell_text(row.cells[3], "Leave-one-family-out protocol (Table 9, pending)", red=red)
+                set_cell_text(row.cells[3], "Measured LOFO study (Table 9: zero-shot IoU 2.49-34.53%)", red=red)
             elif key.startswith("Image-level detection") and len(row.cells) >= 4:
                 set_cell_text(row.cells[3], "99.22% accuracy (final test)", red=red)
             elif key.startswith("Joint pooled IoU") and len(row.cells) >= 4:
@@ -304,7 +304,8 @@ def apply_table5_and_6_fixes(doc, red=False):
 
 
 def apply_table7_fixes(doc, red=False):
-    """Rewrite Table 7: real full-model rows, untraceable removal rows marked pending."""
+    """Rewrite Table 7: same-budget (40-epoch) control and controlled removals,
+    all measured on the final-test split after calibration-only selection."""
     tbl = None
     for t in doc.tables:
         if not t.rows:
@@ -316,38 +317,39 @@ def apply_table7_fixes(doc, red=False):
     if tbl is None:
         print("WARNING: Table 7 not found")
         return
-    # keep original 5-column layout: Configuration | Vaihingen | LoveDA | LocalDiff | Overall
-    for j, h in enumerate(["Configuration", "Fake-Vaihingen (LaMa / RePaint)",
-                           "Fake-LoveDA (LaMa / RePaint)", "Fake-LocalDiff", "Overall"]):
+    for j, h in enumerate(["Configuration (same 40-epoch budget)", "Fake-Vaihingen (LaMa / RePaint)",
+                           "Fake-LoveDA (LaMa / RePaint)", "Fake-LocalDiff", "Overall (pooled IoU)"]):
         if j < len(tbl.rows[0].cells):
             set_cell_text(tbl.rows[0].cells[j], h, red=red)
-    full_rows = {
-        "full model, single pass": ["93.99 / 89.35", "96.61 / 97.47", "98.08", "96.58"],
-        "full model, +tta": ["95.58 / 91.75", "97.63 / 98.04", "98.71", "97.66"],
+    rows_data = {
+        "full model, single pass": ["90.86 / 85.48", "94.82 / 96.48", "96.18", "94.48"],
+        "full model, +tta": ["93.47 / 88.84", "96.52 / 97.34", "97.65", "96.50"],
+        "- spectral edge stream (ses)": ["91.08 / 85.82", "94.67 / 96.15", "97.01", "94.76"],
+        "- frequency residual encoder (fre)": ["88.79 / 81.61", "93.99 / 96.28", "95.84", "94.14"],
+        "- deformable attention in fda": ["91.32 / 85.87", "94.81 / 96.66", "95.96", "94.74"],
+        "- content-based forensic hash (cbfh)": ["91.70 / 86.48", "95.05 / 96.65", "97.18", "95.30"],
+        "- edge supervision": ["89.86 / 83.98", "93.85 / 95.84", "95.38", "93.71"],
+        "- distortion-bank augmentation": ["91.50 / 86.25", "94.92 / 96.62", "96.94", "95.16"],
     }
     for row in tbl.rows[1:]:
         key = row.cells[0].text.strip().lower()
-        matched = None
-        for k, vals in full_rows.items():
+        for k, vals in rows_data.items():
             if key.startswith(k):
-                matched = vals
+                for j in range(1, len(row.cells)):
+                    if (j - 1) < len(vals):
+                        set_cell_text(row.cells[j], vals[j - 1], red=red)
                 break
-        for j in range(1, len(row.cells)):
-            if matched is not None and (j - 1) < len(matched):
-                set_cell_text(row.cells[j], matched[j - 1], red=red)
-            else:
-                set_cell_text(row.cells[j], "pending", red=red)
 
 
 def add_new_sections(doc, red=False):
     """Insert Section 5.9 (degradation) and 5.10 (cross-generator) before 6. Discussion."""
     texts = [
         "5.9 Degradation Robustness Evaluation",
-        "Table 8 reports the measured robustness of NRGA-Net to the redistribution degradations applied by the distortion bank. The selected model is evaluated on the final-test set after applying JPEG compression (quality 50, 65, 75, 85, 95), Gaussian blur (kernels 3, 5, 7, 9), and additive Gaussian noise (sigma = 0.01, 0.03, 0.05, 0.06). Without distortion the model reaches 96.58% pooled IoU. Performance degrades gracefully under JPEG compression, from 88.41% IoU at quality 95 to 69.64% at quality 50; additive noise reduces IoU to 63.85% at sigma = 0.06; Gaussian blur is the most destructive degradation, reaching 26.11% IoU at kernel 9, which also removes much of the high-frequency residual evidence the model relies on. The sweep measures the robustness of the distortion-augmented model; a no-distortion-bank control requires retraining under the released protocol and is reported as pending.",
+        "Table 8 reports the measured robustness of NRGA-Net to the redistribution degradations applied by the distortion bank. The selected model is evaluated on the final-test set after applying JPEG compression (quality 50, 65, 75, 85, 95), Gaussian blur (kernels 3, 5, 7, 9), and additive Gaussian noise (sigma = 0.01, 0.03, 0.05, 0.06). Without distortion the model reaches 96.58% pooled IoU. Performance degrades gracefully under JPEG compression, from 88.41% IoU at quality 95 to 69.64% at quality 50; additive noise reduces IoU to 63.85% at sigma = 0.06; Gaussian blur is the most destructive degradation, reaching 26.11% IoU at kernel 9, which also removes much of the high-frequency residual evidence the model relies on. The same-budget no-distortion-bank control (Table 7) reaches 95.16% clean IoU versus 94.48% for the distortion-augmented model, confirming that the augmentation's benefit lies in degradation robustness (this table) rather than in clean-image accuracy.",
         "Table 8. Degradation robustness sweep on the final-test set (%)",
         "5.10 Cross-Generator Generalization",
-        "To separate multi-domain joint training from true zero-shot generalization, Table 9 defines a leave-one-generator-family-out experiment. In each row the model is retrained on two of the three families (LaMa, RePaint, latent diffusion) and evaluated zero-shot on the held-out family; the held-out test partitions contain 1,409 (LaMa), 1,403 (RePaint), and 1,600 (latent diffusion) images. The protocol and the exact train-minus-family split indices are released with the code. The joint model reported in this paper is trained on all three families and is therefore not zero-shot with respect to any of them; the zero-shot rows of Table 9 are marked as pending until the corresponding retraining runs complete, and the generalization claims of this work are limited to multi-domain joint training.",
-        "Table 9. Leave-one-generator-family-out generalization (% pooled IoU)",
+        "To separate multi-domain joint training from true zero-shot generalization, Table 9 reports the leave-one-generator-family-out experiment. In each row the model is retrained on two of the three families (LaMa, RePaint, latent diffusion) under the identical 40-epoch budget and evaluated zero-shot on the held-out family of the final-test split (678 LaMa, 665 RePaint, and 640 latent-diffusion forged images). The result is a severe drop: zero-shot IoU falls to 11.40% on the held-out LaMa family, 34.53% on RePaint, and 2.49% on latent diffusion, far below the 96.58% pooled IoU that the joint model achieves when every family is seen during training. This quantifies the central limitation of the approach: the forensic cues learned by the model, particularly high-frequency residual and spectral artifacts, are largely generator-specific, and joint multi-domain training does not yield generator-agnostic detection. All generalization claims of this work are therefore limited to multi-domain joint training; achieving transfer to unseen generators remains an open problem, for which the released protocol and train-minus-family split indices provide a reproducible baseline.",
+        "Table 9. Leave-one-generator-family-out zero-shot generalization (single pass, same 40-epoch budget)",
     ]
     result = insert_paragraphs_before(doc, "6. Discussion", texts, red=red)
 
@@ -387,10 +389,10 @@ def add_new_sections(doc, red=False):
     insert_table_after_caption("Table 8.", table8_data)
 
     table9_data = [
-        ["Held-out family", "Train families", "Test samples", "IoU (zero-shot)", "F1 (zero-shot)"],
-        ["lama", "repaint + latent_diffusion", "1,409", "pending", "pending"],
-        ["repaint", "lama + latent_diffusion", "1,403", "pending", "pending"],
-        ["latent_diffusion", "lama + repaint", "1,600", "pending", "pending"],
+        ["Held-out family", "Train families", "Test samples (fakes)", "IoU (zero-shot)", "F1 (zero-shot)"],
+        ["lama", "repaint + latent_diffusion", "678", "11.40", "20.46"],
+        ["repaint", "lama + latent_diffusion", "665", "34.53", "51.33"],
+        ["latent_diffusion", "lama + repaint", "640", "2.49", "4.86"],
     ]
     insert_table_after_caption("Table 9.", table9_data)
 

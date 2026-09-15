@@ -338,6 +338,7 @@ code("""# ----------------------------------------------------------------------
 # Cell A6: aggregate -> table7_ablations.csv + table9_leave_one_family_out.csv
 # ------------------------------------------------------------------------------
 import statistics
+import re as _re
 
 DS_COLS = ['Fake-Vaihingen-lama', 'Fake-Vaihingen-repaint',
            'Fake-LoveDA-lama', 'Fake-LoveDA-repaint', 'Local_Diffusion']
@@ -351,8 +352,11 @@ LABELS = {
     'no_distortion': '- distortion-bank augmentation',
 }
 
+def _base_name(run):
+    return _re.sub(r'_s\d+$', '', run)
+
 def _fmt_cell(results, name, split, ds_key):
-    sel = [r for r in results if r['run'].split('_s')[0] == name]
+    sel = [r for r in results if _base_name(r['run']) == name]
     if not sel:
         return 'pending'
     if ds_key == 'OVERALL':
